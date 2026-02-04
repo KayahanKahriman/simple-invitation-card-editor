@@ -54,6 +54,11 @@ class SIE_Cart_Handler {
 	}
 
 	public function get_item_data( $item_data, $cart_item ) {
+		// Only show in Checkout, not in the Cart to keep it clean
+		if ( is_cart() ) {
+			return $item_data;
+		}
+
 		if ( isset( $cart_item['sie_design_data'] ) ) {
 			foreach ( $cart_item['sie_design_data'] as $layer_id => $layer_info ) {
                 if (isset($layer_info['label']) && isset($layer_info['text'])) {
