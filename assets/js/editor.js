@@ -57,24 +57,10 @@
 
         addTextLayer: function(layer) {
             // Create Sidebar Input
-            let fontSelector = '';
-            if (this.config.fonts && this.config.fonts.length > 0) {
-                fontSelector = `
-                    <select class="sie-layer-font">
-                        ${this.config.fonts.map(font => `
-                            <option value="${font.family}" ${layer.style.fontFamily === font.family ? 'selected' : ''}>
-                                ${font.name}
-                            </option>
-                        `).join('')}
-                    </select>
-                `;
-            }
-
             const inputHtml = `
                 <div class="sie-input-group" data-layer-id="${layer.id}">
                     <label>${layer.label}</label>
                     <input type="text" value="${layer.default_text}" class="sie-layer-input">
-                    ${fontSelector}
                 </div>
             `;
             this.sidebar.append(inputHtml);
@@ -109,22 +95,7 @@
                 self.updateHiddenInput();
             });
 
-            // Sidebar Font -> Preview
-            this.sidebar.on('change', '.sie-layer-font', function() {
-                const $select = $(this);
-                const layerId = $select.closest('.sie-input-group').data('layer-id');
-                const family = $select.val();
-                $(`#sie-layer-${layerId}`).css('font-family', family);
-                
-                // Update config if in admin mode for export
-                if (self.is_admin_mode) {
-                    const layer = self.config.layers.find(l => l.id === layerId);
-                    if (layer) layer.style.fontFamily = family;
-                    self.updateAdminExport();
-                }
-                
-                self.updateHiddenInput();
-            });
+
 
             // Preview -> Sidebar Input
             this.preview.on('input', '.sie-layer', function() {
@@ -209,12 +180,11 @@
             this.config.layers.forEach(layer => {
                 const $group = $(`.sie-input-group[data-layer-id="${layer.id}"]`);
                 const text = $group.find('.sie-layer-input').val();
-                const fontFamily = $group.find('.sie-layer-font').val() || layer.style.fontFamily;
                 
                 data[layer.id] = {
                     label: layer.label,
                     text: text,
-                    fontFamily: fontFamily
+                    fontFamily: layer.style.fontFamily
                 };
             });
             const jsonString = JSON.stringify(data);
@@ -239,11 +209,6 @@
                         if (layerData.text !== undefined) {
                             $group.find('.sie-layer-input').val(layerData.text);
                             $layer.text(layerData.text);
-                        }
-                        
-                        if (layerData.fontFamily) {
-                            $group.find('.sie-layer-font').val(layerData.fontFamily);
-                            $layer.css('font-family', layerData.fontFamily);
                         }
 
                         this.applyShrinkToFit($layer, layerId);
