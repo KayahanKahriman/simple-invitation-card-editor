@@ -40,13 +40,13 @@ class SIE_Cart_Handler {
         }
 
         // Trigger Button
-        echo '<button type="button" id="open-davetiye-tasarimcisi" class="button alt" style="width:100%; margin-bottom:15px;">Davetiye Tasarla</button>';
+        echo '<button type="button" id="open-card-designer" class="button alt" style="width:100%; margin-bottom:15px;">Davetiye Tasarla</button>';
         
         // Modal Container (Hidden by default)
-        echo '<div id="davetiye-tasarimcisi" class="sie-modal" style="display:none;">';
+        echo '<div id="card-designer" class="sie-modal" style="display:none;">';
             echo '<div class="sie-modal-header">';
                  echo '<h2>Tasarımcı</h2>';
-                 echo '<button type="button" id="close-davetiye-tasarimcisi" class="sie-close-btn">&times;</button>';
+                 echo '<button type="button" id="close-card-designer" class="sie-close-btn">&times;</button>';
             echo '</div>';
             echo '<div id="sie-editor-app"></div>'; 
         echo '</div>';
@@ -57,9 +57,9 @@ class SIE_Cart_Handler {
         ?>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
-            var modal = document.getElementById('davetiye-tasarimcisi');
-            var btn = document.getElementById('open-davetiye-tasarimcisi');
-            var closeBtn = document.getElementById('close-davetiye-tasarimcisi');
+            var modal = document.getElementById('card-designer');
+            var btn = document.getElementById('open-card-designer');
+            var closeBtn = document.getElementById('close-card-designer');
             
             if (btn && modal) {
                 // Move modal to body end immediately to fix z-index issues
