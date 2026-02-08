@@ -1,85 +1,194 @@
-#sie-editor-app {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
-    background: #f9f9f9;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    flex-wrap: wrap;
+/* Simple Invitation Editor - Full Screen Mode */
+
+/* The Modal Container (Hidden by default via inline style) */
+#davetiye-tasarimcisi.sie-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: #ffffff !important;
+    z-index: 2147483647 !important; /* Max z-index */
+    display: flex; /* Flex is set by JS, but keep base styles */
+    flex-direction: column !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-sizing: border-box !important;
 }
 
-.sie-sidebar {
+/* Modal Header */
+.sie-modal-header {
+    height: 60px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    z-index: 10;
+}
+
+.sie-modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.sie-close-btn {
+    background: none;
+    border: none;
+    font-size: 32px;
+    line-height: 1;
+    cursor: pointer;
+    color: #666;
+    padding: 0 10px;
+}
+
+.sie-close-btn:hover {
+    color: #d90429;
+}
+
+/* The Editor App Container (Inside Modal) */
+#sie-editor-app {
     flex: 1;
-    min-width: 300px;
+    display: flex;
+    overflow: hidden; /* Prevent body scroll, handle panels individually */
+    background-color: #f5f5f5;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    gap: 0 !important; /* Reset gap, use borders */
+}
+
+/* Sidebar (Left Panel - Scrollable) */
+.sie-sidebar {
+    width: 360px;
+    min-width: 360px;
+    height: 100%;
+    background-color: #ffffff;
+    border-right: 1px solid #e0e0e0;
+    overflow-y: auto;
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+    z-index: 5;
 }
 
+/* Preview Area (Right Panel - Fixed/Sticky) */
 .sie-preview-container {
-    flex: 0 0 auto;
+    flex: 1;
+    height: 100%;
+    background-color: #eef2f7; /* FPD style neutral background */
+    background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+    background-size: 20px 20px; /* Grid pattern */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     position: relative;
-    background-size: cover;
-    background-position: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     overflow: hidden;
+    padding: 40px;
 }
 
+/* Layers on Canvas */
 .sie-layer {
     position: absolute;
-    cursor: text;
+    cursor: move; /* Move cursor for draggable */
     white-space: pre-wrap;
     outline: none;
-    transition: box-shadow 0.2s;
-    user-select: text;
+    transition: box-shadow 0.2s, transform 0.2s;
+    user-select: none; /* Prevent text selection while dragging */
 }
 
 .sie-layer:hover {
-    box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.5);
+    box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.5); /* Gold outline */
 }
 
+.sie-layer.is-selected,
 .sie-layer:focus {
     box-shadow: 0 0 0 2px #d4af37;
+    z-index: 100;
 }
 
+/* Input Groups in Sidebar */
 .sie-input-group {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.sie-input-group:last-child {
+    border-bottom: none;
 }
 
 .sie-input-group label {
-    font-weight: bold;
-    font-size: 14px;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    color: #555;
+    letter-spacing: 0.5px;
 }
 
-.sie-input-group input, 
+.sie-input-group input[type="text"], 
+.sie-input-group textarea,
 .sie-input-group select {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    background: #fafafa;
 }
 
-/* Admin Mode */
-body.sie-admin-mode .sie-layer {
-    cursor: move;
+.sie-input-group input:focus, 
+.sie-input-group textarea:focus,
+.sie-input-group select:focus {
+    border-color: #d4af37;
+    background: #fff;
+    outline: none;
 }
 
+/* Active State Highlighting */
 .sie-input-group.active {
-    background: #fff9e6;
-    border: 1px solid #d4af37;
-    padding: 10px;
-    border-radius: 4px;
+    background-color: #fffbf0;
+    border-left: 3px solid #d4af37;
+    padding-left: 10px;
+    margin-left: -10px; /* Compensate for padding */
+    border-radius: 0 4px 4px 0;
 }
 
-@media (max-width: 768px) {
+/* Mobile Responsiveness */
+@media (max-width: 900px) {
     #sie-editor-app {
-        flex-direction: column-reverse;
+        flex-direction: column-reverse; /* Preview Top, Inputs Bottom */
     }
+
+    .sie-sidebar {
+        width: 100%;
+        min-width: 0;
+        height: 50%;
+        border-right: none;
+        border-top: 1px solid #e0e0e0;
+    }
+
     .sie-preview-container {
-        width: 100% !important;
-        height: auto !important;
-        aspect-ratio: var(--sie-aspect-ratio);
+        height: 50%;
+        padding: 20px;
+    }
+    
+    .sie-modal-header {
+        height: 50px;
+        padding: 0 15px;
     }
 }

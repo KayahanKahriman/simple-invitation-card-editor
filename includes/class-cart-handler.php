@@ -39,8 +39,47 @@ class SIE_Cart_Handler {
             return;
         }
 
-        echo '<div id="sie-editor-app"></div>';
+        // Trigger Button
+        echo '<button type="button" id="open-davetiye-tasarimcisi" class="button alt" style="width:100%; margin-bottom:15px;">Davetiye Tasarla</button>';
+        
+        // Modal Container (Hidden by default)
+        echo '<div id="davetiye-tasarimcisi" class="sie-modal" style="display:none;">';
+            echo '<div class="sie-modal-header">';
+                 echo '<h2>Tasarımcı</h2>';
+                 echo '<button type="button" id="close-davetiye-tasarimcisi" class="sie-close-btn">&times;</button>';
+            echo '</div>';
+            echo '<div id="sie-editor-app"></div>'; 
+        echo '</div>';
+        
         echo '<input type="hidden" name="sie_custom_data" id="sie-custom-data" value="">';
+
+        // Inline JS for Modal
+        ?>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var modal = document.getElementById('davetiye-tasarimcisi');
+            var btn = document.getElementById('open-davetiye-tasarimcisi');
+            var closeBtn = document.getElementById('close-davetiye-tasarimcisi');
+            
+            if (btn && modal) {
+                // Move modal to body end immediately to fix z-index issues
+                document.body.appendChild(modal);
+
+                btn.onclick = function() {
+                    modal.style.display = "flex";
+                    document.body.style.overflow = "hidden"; // Prevent scrolling behind modal
+                }
+            }
+            
+            if (closeBtn && modal) {
+                closeBtn.onclick = function() {
+                    modal.style.display = "none";
+                    document.body.style.overflow = "auto";
+                }
+            }
+        });
+        </script>
+        <?php
     }
 
 	public function add_cart_item_data( $cart_item_data, $product_id, $variation_id ) {
