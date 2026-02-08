@@ -59,7 +59,9 @@ class Simple_Invitation_Editor {
 			return;
 		}
 
-		wp_enqueue_style( 'sie-editor-css', SIE_PLUGIN_URL . 'assets/css/editor.css', array(), SIE_VERSION );
+		// Load custom fonts first
+		wp_enqueue_style( 'sie-fonts-css', SIE_PLUGIN_URL . 'assets/css/fonts.css', array(), SIE_VERSION );
+		wp_enqueue_style( 'sie-editor-css', SIE_PLUGIN_URL . 'assets/css/editor.css', array( 'sie-fonts-css' ), SIE_VERSION );
 		wp_enqueue_script( 'sie-editor-js', SIE_PLUGIN_URL . 'assets/js/editor.js', array( 'jquery' ), SIE_VERSION, true );
 
 		wp_localize_script( 'sie-editor-js', 'sie_config', array(
