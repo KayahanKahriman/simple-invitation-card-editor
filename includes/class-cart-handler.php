@@ -31,8 +31,8 @@ class SIE_Cart_Handler
         // Save design data to order line item
         add_action('woocommerce_checkout_create_order_line_item', array($this, 'checkout_create_order_line_item'), 10, 4);
 
-        // Add hidden input to single product page
-        add_action('woocommerce_before_add_to_cart_button', array($this, 'render_editor_container'));
+        // Add editor button and modal to single product page
+        add_action('woocommerce_single_product_summary', array($this, 'render_editor_container'), 30);
     }
 
     public function render_editor_container()
@@ -43,8 +43,8 @@ class SIE_Cart_Handler
             return;
         }
 
-        // Trigger Button
-        echo '<button type="button" id="open-card-designer" class="button alt" style="width:100%; margin-bottom:15px;">Davetiye Tasarla</button>';
+        // Trigger Button - Disabled by default until variant is selected
+        echo '<button type="button" id="open-card-designer" class="button alt" style="width:100%; margin-bottom:15px;" disabled>Davetiye Tasarla</button>';
 
         // Modal Container (Hidden by default)
         echo '<div id="card-designer" class="sie-modal" style="display:none;">';
@@ -80,6 +80,37 @@ class SIE_Cart_Handler
                     closeBtn.onclick = function () {
                         modal.style.display = "none";
                         document.body.style.overflow = "auto";
+                    }
+                }
+
+                // Enable button when variation is selected
+                var variationForm = document.querySelector('.variations_form');
+                if (variationForm && btn) {
+                    // Check if product has variations
+                    var hasVariations = document.querySelector('.variations');
+                    
+                    if (hasVariations) {
+                        // Listen for variation selection
+                        jQuery(variationForm).on('found_variation', function(event, variation) {
+                            // Variation selected - enable button
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.style.cursor = 'pointer';
+                        });
+
+                        jQuery(variationForm).on('reset_data', function() {
+                            // Variation cleared - disable button
+                            btn.disabled = true;
+                            btn.style.opacity = '0.5';
+                            btn.style.cursor = 'not-allowed';
+                        });
+
+                        // Set initial disabled state styling
+                        btn.style.opacity = '0.5';
+                        btn.style.cursor = 'not-allowed';
+                    } else {
+                        // No variations - enable button immediately
+                        btn.disabled = false;
                     }
                 }
             });

@@ -42,6 +42,7 @@ class Simple_Invitation_Editor
 	{
 		require_once SIE_PLUGIN_DIR . 'includes/class-product-meta.php';
 		require_once SIE_PLUGIN_DIR . 'includes/class-cart-handler.php';
+		require_once SIE_PLUGIN_DIR . 'includes/class-product-page-handler.php';
 	}
 
 	private function init_hooks()
@@ -51,6 +52,7 @@ class Simple_Invitation_Editor
 		// Initialize classes
 		SIE_Product_Meta::get_instance();
 		SIE_Cart_Handler::get_instance();
+		SIE_Product_Page_Handler::get_instance();
 	}
 
 	public function enqueue_scripts()
