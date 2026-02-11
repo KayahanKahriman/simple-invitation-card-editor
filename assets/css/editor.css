@@ -155,7 +155,8 @@ body.admin-bar #card-designer.sie-modal {
     position: absolute;
     cursor: move;
     /* Move cursor for draggable */
-    white-space: pre-wrap;
+    white-space: pre;
+    overflow: visible;
     outline: none;
     transition: box-shadow 0.2s, transform 0.2s;
     user-select: none;

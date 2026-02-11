@@ -66,10 +66,16 @@
             const baseH = this.config.canvas.height;
             const scale = Math.min(availW / baseW, availH / baseH);
 
+            // Keep canvas at natural size, use CSS transform to scale visually
             this.preview.css({
-                width: Math.floor(baseW * scale) + 'px',
-                height: Math.floor(baseH * scale) + 'px'
+                width: baseW + 'px',
+                height: baseH + 'px',
+                transform: 'scale(' + scale + ')',
+                transformOrigin: 'top left',
+                marginRight: Math.floor(baseW * (scale - 1)) + 'px',
+                marginBottom: Math.floor(baseH * (scale - 1)) + 'px'
             });
+            this.scaleFactor = scale;
         },
 
         renderLayers: function () {
@@ -96,12 +102,23 @@
             this.sidebar.append(inputHtml);
 
             // Create Preview Layer
+            const style = Object.assign({}, layer.style);
+
+            // Convert left+width to center-point positioning
+            if (style.left && style.width) {
+                const left = parseFloat(style.left);
+                const width = parseFloat(style.width);
+                style.left = (left + width / 2) + '%';
+                delete style.width;
+            }
+            style.transform = 'translateX(-50%)';
+
             const $el = $('<div>', {
                 class: 'sie-layer',
                 id: `sie-layer-${layer.id}`,
                 contenteditable: !this.is_admin_mode,
                 text: layer.default_text
-            }).css(layer.style);
+            }).css(style);
 
             if (this.is_admin_mode) {
                 this.makeDraggable($el, layer);
