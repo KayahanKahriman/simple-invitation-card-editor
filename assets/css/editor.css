@@ -126,21 +126,28 @@ body.admin-bar #card-designer.sie-modal {
     z-index: 5;
 }
 
-/* Preview Area (Right Panel - Fixed/Sticky) */
-.sie-preview-container {
+/* Preview Area (Right Panel) */
+.sie-preview-area {
     flex: 1;
     height: 100%;
     background-color: #eef2f7;
-    /* FPD style neutral background */
     background-image: radial-gradient(#d1d5db 1px, transparent 1px);
     background-size: 20px 20px;
-    /* Grid pattern */
     display: flex;
     align-items: center;
     justify-content: center;
-    position: relative;
     overflow: hidden;
     padding: 40px;
+}
+
+/* Canvas (sized by JS to maintain exact aspect ratio from JSON config) */
+.sie-canvas {
+    position: relative;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
 }
 
 /* Layers on Canvas */
@@ -232,7 +239,7 @@ body.admin-bar #card-designer.sie-modal {
         border-top: 1px solid #e0e0e0;
     }
 
-    .sie-preview-container {
+    .sie-preview-area {
         height: 50%;
         padding: 20px;
     }

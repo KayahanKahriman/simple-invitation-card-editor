@@ -35,16 +35,41 @@
         renderLayout: function () {
             this.container.html(`
                 <div class="sie-sidebar"></div>
-                <div class="sie-preview-container" style="
-                    width: ${this.config.canvas.width}px; 
-                    height: ${this.config.canvas.height}px; 
-                    background-image: url('${this.config.canvas.bg_image}');
-                    --sie-aspect-ratio: ${this.config.canvas.width} / ${this.config.canvas.height};
-                "></div>
+                <div class="sie-preview-area">
+                    <div class="sie-canvas" style="
+                        background-image: url('${this.config.canvas.bg_image}');
+                    "></div>
+                </div>
             `);
 
             this.sidebar = this.container.find('.sie-sidebar');
-            this.preview = this.container.find('.sie-preview-container');
+            this.preview = this.container.find('.sie-canvas');
+            this.previewArea = this.container.find('.sie-preview-area');
+
+            // Use ResizeObserver to fit canvas when modal becomes visible or resizes
+            const self = this;
+            this._resizeObserver = new ResizeObserver(function () {
+                self.fitCanvas();
+            });
+            this._resizeObserver.observe(this.previewArea[0]);
+        },
+
+        fitCanvas: function () {
+            const areaW = this.previewArea[0].clientWidth;
+            const areaH = this.previewArea[0].clientHeight;
+            if (areaW === 0 || areaH === 0) return; // still hidden
+
+            const pad = window.innerWidth <= 900 ? 20 : 40;
+            const availW = areaW - pad * 2;
+            const availH = areaH - pad * 2;
+            const baseW = this.config.canvas.width;
+            const baseH = this.config.canvas.height;
+            const scale = Math.min(availW / baseW, availH / baseH);
+
+            this.preview.css({
+                width: Math.floor(baseW * scale) + 'px',
+                height: Math.floor(baseH * scale) + 'px'
+            });
         },
 
         renderLayers: function () {
