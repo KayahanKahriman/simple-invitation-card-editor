@@ -1,0 +1,90 @@
+<?php
+/**
+ * Handles Product Page modifications for Simple Invitation Editor
+ * Hides default add-to-cart button and FPD elements for invitation products,
+ * while keeping the variation form intact.
+ */
+
+if (!defined('ABSPATH')) {
+  exit;
+}
+
+class SIE_Product_Page_Handler
+{
+
+  private static $instance = null;
+
+  public static function get_instance()
+  {
+    if (null === self::$instance) {
+      self::$instance = new self();
+    }
+    return self::$instance;
+  }
+
+  private function __construct()
+  {
+    // Add custom CSS to hide default elements
+    add_action('wp_head', array($this, 'add_custom_css'));
+  }
+
+  /**
+   * Check if current product has invitation editor enabled
+   */
+  private function is_invitation_product()
+  {
+    if (!is_product()) {
+      return false;
+    }
+
+    global $post;
+    $config = get_post_meta($post->ID, '_invitation_json_config', true);
+
+    return !empty($config);
+  }
+
+  /**
+   * Add CSS to hide default WooCommerce add-to-cart button and FPD elements.
+   * We use CSS instead of removing template actions so the variation form stays intact.
+   */
+  public function add_custom_css()
+  {
+    if (!$this->is_invitation_product()) {
+      return;
+    }
+    ?>
+    <style type="text/css">
+      /* Hide default WooCommerce add to cart button */
+      .single-product .product form.cart .single_add_to_cart_button {
+        display: none !important;
+      }
+
+      /* Hide quantity input */
+      .single-product .product form.cart .quantity {
+        display: none !important;
+      }
+
+      /* Hide FPD "Davetiyeni Özelleştir" button */
+      .single-product .fpd-start-customizing-button,
+      .single-product #fpd-start-customizing-button,
+      .single-product .fpd-external-btn {
+        display: none !important;
+      }
+
+      /* Hide FPD product designer wrapper */
+      .single-product .fpd-product-designer-wrapper {
+        display: none !important;
+      }
+
+      /* Style the custom "Davetiye Tasarla" button */
+      /* Styles removed to use theme's is-style-white-cta class */
+
+
+      /* Ensure proper spacing */
+      .sie-custom-cart-section {
+        margin-top: 20px;
+      }
+    </style>
+    <?php
+  }
+}
