@@ -61,7 +61,7 @@
             const inputHtml = `
                 <div class="sie-input-group" data-layer-id="${layer.id}">
                     <label>${layer.label}</label>
-                    <input type="text" value="${layer.default_text}" class="sie-layer-input">
+                    <textarea class="sie-layer-input" rows="3">${layer.default_text}</textarea>
                 </div>
             `;
             this.sidebar.append(inputHtml);
@@ -79,7 +79,6 @@
             }
 
             this.preview.append($el);
-            this.applyShrinkToFit($el, layer.id);
         },
 
         bindEvents: function () {
@@ -92,7 +91,6 @@
                 const text = $input.val();
                 const $layer = $(`#sie-layer-${layerId}`);
                 $layer.text(text);
-                self.applyShrinkToFit($layer, layerId);
                 self.updateHiddenInput();
             });
 
@@ -104,7 +102,6 @@
                 const layerId = $layer.attr('id').replace('sie-layer-', '');
                 const text = $layer.text();
                 $(`.sie-input-group[data-layer-id="${layerId}"] input`).val(text);
-                self.applyShrinkToFit($layer, layerId);
                 self.updateHiddenInput();
             });
 
@@ -168,23 +165,6 @@
             });
         },
 
-        applyShrinkToFit: function ($el, layerId) {
-            const layer = this.config.layers.find(l => l.id === layerId);
-            if (!layer || !layer.style || !layer.style.fontSize) return;
-
-            const originalSize = parseInt(layer.style.fontSize);
-            const containerWidth = $el.width();
-            const containerHeight = $el.height();
-
-            let currentSize = originalSize;
-            $el.css('font-size', currentSize + 'px');
-
-            // Simple heuristic: if scrollWidth > width, reduce font size
-            while (($el[0].scrollWidth > containerWidth || $el[0].scrollHeight > containerHeight) && currentSize > 8) {
-                currentSize--;
-                $el.css('font-size', currentSize + 'px');
-            }
-        },
 
         makeDraggable: function ($el, layer) {
             const self = this;
@@ -257,8 +237,6 @@
                             $group.find('.sie-layer-input').val(layerData.text);
                             $layer.text(layerData.text);
                         }
-
-                        this.applyShrinkToFit($layer, layerId);
                     });
                 } catch (e) {
                     console.warn('SIE: Failed to load autosave', e);
