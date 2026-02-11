@@ -1,8 +1,12 @@
 <?php
 /**
  * Handles Product Page modifications for Simple Invitation Editor
+<<<<<<< HEAD
  * Hides default add-to-cart button and FPD elements for invitation products,
  * while keeping the variation form intact.
+=======
+ * Hides quantity input and default add to cart button for invitation products
+>>>>>>> 22cd90be9a413c7af6e0d04b554807f56cfd43da
  */
 
 if (!defined('ABSPATH')) {
@@ -47,6 +51,7 @@ class SIE_Product_Page_Handler
    * Add CSS to hide default WooCommerce add-to-cart button and FPD elements.
    * We use CSS instead of removing template actions so the variation form stays intact.
    */
+
   public function add_custom_css()
   {
     if (!$this->is_invitation_product()) {
@@ -78,7 +83,6 @@ class SIE_Product_Page_Handler
 
       /* Style the custom "Davetiye Tasarla" button */
       /* Styles removed to use theme's is-style-white-cta class */
-
 
       /* Ensure proper spacing */
       .sie-custom-cart-section {
