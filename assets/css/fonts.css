@@ -140,8 +140,8 @@
 }
 
 @font-face {
-    font-family: 'Mokka';
-    src: url('../fonts/Mokka-SmallCaps.ttf') format('truetype');
+    font-family: 'MokkaSmallCaps';
+    src: url('../fonts/MokkaSmallCaps.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
@@ -268,7 +268,7 @@
 }
 
 @font-face {
-    font-family: 'Vollkorn SC';
+    font-family: 'Vollkorn SC Bold';
     src: url('../fonts/VollkornSC-Regular__bold.ttf') format('truetype');
     font-weight: bold;
     font-style: normal;
@@ -276,7 +276,7 @@
 }
 
 @font-face {
-    font-family: 'Vollkorn SC';
+    font-family: 'Vollkorn SC Bold Italic';
     src: url('../fonts/VollkornSC-Regular__bolditalic.ttf') format('truetype');
     font-weight: bold;
     font-style: italic;

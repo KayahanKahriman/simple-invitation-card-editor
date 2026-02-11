@@ -56,6 +56,7 @@
         },
 
         addTextLayer: function (layer) {
+            console.log('SIE: Adding text layer', layer.id, 'Font Family:', layer.style.fontFamily);
             // Create Sidebar Input
             const inputHtml = `
                 <div class="sie-input-group" data-layer-id="${layer.id}">
