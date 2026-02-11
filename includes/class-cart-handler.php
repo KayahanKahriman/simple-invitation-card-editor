@@ -32,7 +32,10 @@ class SIE_Cart_Handler
         add_action('woocommerce_checkout_create_order_line_item', array($this, 'checkout_create_order_line_item'), 10, 4);
 
         // Add editor button and modal to single product page
-        add_action('woocommerce_single_product_summary', array($this, 'render_editor_container'), 30);
+        // Note: Using woocommerce_single_variation hook (not woocommerce_single_product_summary)
+        // because block themes (FSE) don't fire woocommerce_single_product_summary.
+        // This hook fires inside the variation form rendered by the woocommerce/add-to-cart-form block.
+        add_action('woocommerce_single_variation', array($this, 'render_editor_container'), 15);
     }
 
     public function render_editor_container()
@@ -44,7 +47,10 @@ class SIE_Cart_Handler
         }
 
         // Trigger Button - Disabled by default until variant is selected
-        echo '<button type="button" id="open-card-designer" class="button alt" style="width:100%; margin-bottom:15px;" disabled>Davetiye Tasarla</button>';
+        // Trigger Button - Disabled by default until variant is selected
+        echo '<div class="wp-block-button is-style-cta-button">';
+        echo '<button type="button" id="open-card-designer" class="wp-block-button__link" disabled>Davetiyeyi Sana Özel Yap</button>';
+        echo '</div>';
 
         // Modal Container (Hidden by default)
         echo '<div id="card-designer" class="sie-modal" style="display:none;">';
@@ -88,17 +94,17 @@ class SIE_Cart_Handler
                 if (variationForm && btn) {
                     // Check if product has variations
                     var hasVariations = document.querySelector('.variations');
-                    
+
                     if (hasVariations) {
                         // Listen for variation selection
-                        jQuery(variationForm).on('found_variation', function(event, variation) {
+                        jQuery(variationForm).on('found_variation', function (event, variation) {
                             // Variation selected - enable button
                             btn.disabled = false;
                             btn.style.opacity = '1';
                             btn.style.cursor = 'pointer';
                         });
 
-                        jQuery(variationForm).on('reset_data', function() {
+                        jQuery(variationForm).on('reset_data', function () {
                             // Variation cleared - disable button
                             btn.disabled = true;
                             btn.style.opacity = '0.5';
