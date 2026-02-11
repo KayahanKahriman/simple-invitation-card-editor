@@ -50,6 +50,10 @@
         renderLayers: function () {
             this.config.layers.forEach(layer => {
                 if (layer.type === 'text') {
+                    // Convert literal \n to actual newline characters
+                    if (layer.default_text) {
+                        layer.default_text = layer.default_text.replace(/\\n/g, '\n');
+                    }
                     this.addTextLayer(layer);
                 }
             });
