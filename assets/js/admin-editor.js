@@ -4,6 +4,7 @@
     var SIE_AdminEditor = {
         config: null,
         selectedLayerId: null,
+        selectedLayerIds: [],
         scaleFactor: 1,
         _resizeObserver: null,
 
@@ -264,21 +265,33 @@
                 self.addNewLayer();
             });
 
-            this.$leftPanel.on('click', '.sie-admin-layer-item', function () {
+            this.$leftPanel.on('click', '.sie-admin-layer-item', function (e) {
                 var id = $(this).data('layer-id');
-                self.selectLayerById(id);
+                if (e.shiftKey && self.selectedLayerId) {
+                    self.toggleLayerInSelection(id);
+                } else {
+                    self.selectLayerById(id);
+                }
             });
 
             this.$canvas.on('mousedown', '.sie-admin-layer', function (e) {
                 var id = $(this).data('layer-id');
-                self.selectLayerById(id);
+                if (e.shiftKey && self.selectedLayerId) {
+                    self.toggleLayerInSelection(id);
+                } else if (self.selectedLayerIds.indexOf(id) === -1) {
+                    self.selectLayerById(id);
+                } else {
+                    // Already selected — ensure properties panel is shown
+                    self.selectedLayerId = id;
+                    var layer = self.getLayerById(id);
+                    if (layer) self.showPropertiesPanel(layer);
+                }
             });
 
             // Deselect on canvas background click
             this.$canvasArea.on('click', function (e) {
-                if ($(e.target).hasClass('sie-admin-canvas-area') || $(e.target).hasClass('sie-admin-canvas')) {
-                    self.deselectLayer();
-                }
+                if ($(e.target).closest('.sie-admin-layer').length) return;
+                self.deselectLayer();
             });
         },
 
@@ -325,7 +338,7 @@
             $list.empty();
 
             this.config.layers.forEach(function (layer) {
-                var selected = self.selectedLayerId === layer.id ? ' selected' : '';
+                var selected = self.selectedLayerIds.indexOf(layer.id) !== -1 ? ' selected' : '';
                 $list.append(
                     '<li class="sie-admin-layer-item' + selected + '" data-layer-id="' + layer.id + '">' +
                     '<span class="dashicons dashicons-text"></span>' +
@@ -358,14 +371,15 @@
             style.position = 'absolute';
 
             var text = (layer.default_text || '').replace(/\\n/g, '\n');
+            var htmlText = this.escapeHtml(text).replace(/\n/g, '<br>');
 
             var $el = $('<div>')
                 .addClass('sie-admin-layer')
                 .attr('data-layer-id', layer.id)
                 .css(style)
-                .text(text);
+                .html(htmlText);
 
-            if (this.selectedLayerId === layer.id) {
+            if (this.selectedLayerIds.indexOf(layer.id) !== -1) {
                 $el.addClass('selected');
             }
 
@@ -377,14 +391,8 @@
 
         selectLayerById: function (id) {
             this.selectedLayerId = id;
-
-            // Update layer list selection
-            this.$leftPanel.find('.sie-admin-layer-item').removeClass('selected');
-            this.$leftPanel.find('.sie-admin-layer-item[data-layer-id="' + id + '"]').addClass('selected');
-
-            // Update canvas layer selection
-            this.$canvas.find('.sie-admin-layer').removeClass('selected');
-            this.$canvas.find('.sie-admin-layer[data-layer-id="' + id + '"]').addClass('selected');
+            this.selectedLayerIds = [id];
+            this.refreshSelectionUI();
 
             // Show properties panel
             var layer = this.getLayerById(id);
@@ -393,8 +401,44 @@
             }
         },
 
+        toggleLayerInSelection: function (id) {
+            var idx = this.selectedLayerIds.indexOf(id);
+            if (idx !== -1) {
+                // Remove from selection
+                this.selectedLayerIds.splice(idx, 1);
+                if (this.selectedLayerId === id) {
+                    this.selectedLayerId = this.selectedLayerIds.length ? this.selectedLayerIds[this.selectedLayerIds.length - 1] : null;
+                }
+            } else {
+                // Add to selection
+                this.selectedLayerIds.push(id);
+                this.selectedLayerId = id;
+            }
+
+            this.refreshSelectionUI();
+
+            if (this.selectedLayerId) {
+                var layer = this.getLayerById(this.selectedLayerId);
+                if (layer) this.showPropertiesPanel(layer);
+            } else {
+                this.$rightPanel.addClass('hidden');
+            }
+        },
+
+        refreshSelectionUI: function () {
+            var self = this;
+            this.$leftPanel.find('.sie-admin-layer-item').removeClass('selected');
+            this.$canvas.find('.sie-admin-layer').removeClass('selected');
+
+            this.selectedLayerIds.forEach(function (id) {
+                self.$leftPanel.find('.sie-admin-layer-item[data-layer-id="' + id + '"]').addClass('selected');
+                self.$canvas.find('.sie-admin-layer[data-layer-id="' + id + '"]').addClass('selected');
+            });
+        },
+
         deselectLayer: function () {
             this.selectedLayerId = null;
+            this.selectedLayerIds = [];
             this.$leftPanel.find('.sie-admin-layer-item').removeClass('selected');
             this.$canvas.find('.sie-admin-layer').removeClass('selected');
             this.$rightPanel.addClass('hidden');
@@ -588,7 +632,8 @@
 
             if (prop === 'default_text') {
                 var text = value.replace(/\\n/g, '\n');
-                this.$canvas.find('.sie-admin-layer[data-layer-id="' + this.selectedLayerId + '"]').text(text);
+                var htmlText = this.escapeHtml(text).replace(/\n/g, '<br>');
+                this.$canvas.find('.sie-admin-layer[data-layer-id="' + this.selectedLayerId + '"]').html(htmlText);
             }
 
             if (prop === 'label') {
@@ -673,15 +718,33 @@
         makeLayerDraggable: function ($el, layer) {
             var self = this;
             var isDragging = false;
-            var startX, startY, startLeft, startTop;
+            var startX, startY;
+            var dragTargets = [];
 
             $el.on('mousedown', function (e) {
                 if (e.which !== 1) return; // left click only
                 isDragging = true;
                 startX = e.clientX;
                 startY = e.clientY;
-                startLeft = parseFloat($el.css('left'));
-                startTop = parseFloat($el.css('top'));
+
+                // Collect all selected layers (or just this one if not in selection)
+                var ids = self.selectedLayerIds.indexOf(layer.id) !== -1
+                    ? self.selectedLayerIds
+                    : [layer.id];
+
+                dragTargets = [];
+                ids.forEach(function (id) {
+                    var $layerEl = self.$canvas.find('.sie-admin-layer[data-layer-id="' + id + '"]');
+                    var layerData = self.getLayerById(id);
+                    if ($layerEl.length && layerData) {
+                        dragTargets.push({
+                            $el: $layerEl,
+                            layer: layerData,
+                            startLeft: parseFloat($layerEl.css('left')),
+                            startTop: parseFloat($layerEl.css('top'))
+                        });
+                    }
+                });
 
                 e.preventDefault();
 
@@ -694,20 +757,22 @@
                     var canvasW = self.config.canvas.width;
                     var canvasH = self.config.canvas.height;
 
-                    var newLeftPx = startLeft + dx;
-                    var newTopPx = startTop + dy;
+                    dragTargets.forEach(function (t) {
+                        var newLeftPx = t.startLeft + dx;
+                        var newTopPx = t.startTop + dy;
 
-                    var newLeftPct = (newLeftPx / canvasW * 100).toFixed(2);
-                    var newTopPct = (newTopPx / canvasH * 100).toFixed(2);
+                        var newLeftPct = (newLeftPx / canvasW * 100).toFixed(2);
+                        var newTopPct = (newTopPx / canvasH * 100).toFixed(2);
 
-                    $el.css({ left: newLeftPct + '%', top: newTopPct + '%' });
+                        t.$el.css({ left: newLeftPct + '%', top: newTopPct + '%' });
 
-                    // Reverse the center-point conversion to store original left+width
-                    var origWidth = parseFloat(layer.style.width) || 80;
-                    layer.style.left = (parseFloat(newLeftPct) - origWidth / 2).toFixed(2) + '%';
-                    layer.style.top = newTopPct + '%';
+                        // Reverse the center-point conversion to store original left+width
+                        var origWidth = parseFloat(t.layer.style.width) || 80;
+                        t.layer.style.left = (parseFloat(newLeftPct) - origWidth / 2).toFixed(2) + '%';
+                        t.layer.style.top = newTopPct + '%';
+                    });
 
-                    // Sync property fields if this layer is selected
+                    // Sync property fields for the primary selected layer
                     if (self.selectedLayerId === layer.id) {
                         $('#sie-prop-left').val(parseFloat(layer.style.left).toFixed(2));
                         $('#sie-prop-top').val(parseFloat(layer.style.top).toFixed(2));
@@ -753,34 +818,38 @@
 
                 e.preventDefault();
                 var step = e.shiftKey ? 10 : 1;
-                var $el = self.$canvas.find('.sie-admin-layer[data-layer-id="' + self.selectedLayerId + '"]');
-                var layer = self.getLayerById(self.selectedLayerId);
-                if (!$el.length || !layer) return;
-
-                var left = parseFloat($el.css('left'));
-                var top = parseFloat($el.css('top'));
                 var canvasW = self.config.canvas.width;
                 var canvasH = self.config.canvas.height;
 
-                if (key === 'ArrowLeft') left -= step;
-                if (key === 'ArrowRight') left += step;
-                if (key === 'ArrowUp') top -= step;
-                if (key === 'ArrowDown') top += step;
+                self.selectedLayerIds.forEach(function (id) {
+                    var $el = self.$canvas.find('.sie-admin-layer[data-layer-id="' + id + '"]');
+                    var layer = self.getLayerById(id);
+                    if (!$el.length || !layer) return;
 
-                var newLeftPct = (left / canvasW * 100).toFixed(2);
-                var newTopPct = (top / canvasH * 100).toFixed(2);
+                    var left = parseFloat($el.css('left'));
+                    var top = parseFloat($el.css('top'));
 
-                $el.css({ left: newLeftPct + '%', top: newTopPct + '%' });
+                    if (key === 'ArrowLeft') left -= step;
+                    if (key === 'ArrowRight') left += step;
+                    if (key === 'ArrowUp') top -= step;
+                    if (key === 'ArrowDown') top += step;
 
-                // Reverse center-point conversion
-                var origWidth = parseFloat(layer.style.width) || 80;
-                layer.style.left = (parseFloat(newLeftPct) - origWidth / 2).toFixed(2) + '%';
-                layer.style.top = newTopPct + '%';
+                    var newLeftPct = (left / canvasW * 100).toFixed(2);
+                    var newTopPct = (top / canvasH * 100).toFixed(2);
 
-                if (self.selectedLayerId === layer.id) {
-                    $('#sie-prop-left').val(parseFloat(layer.style.left).toFixed(2));
-                    $('#sie-prop-top').val(parseFloat(layer.style.top).toFixed(2));
-                }
+                    $el.css({ left: newLeftPct + '%', top: newTopPct + '%' });
+
+                    // Reverse center-point conversion
+                    var origWidth = parseFloat(layer.style.width) || 80;
+                    layer.style.left = (parseFloat(newLeftPct) - origWidth / 2).toFixed(2) + '%';
+                    layer.style.top = newTopPct + '%';
+
+                    // Sync property fields for the primary selected layer
+                    if (self.selectedLayerId === id) {
+                        $('#sie-prop-left').val(parseFloat(layer.style.left).toFixed(2));
+                        $('#sie-prop-top').val(parseFloat(layer.style.top).toFixed(2));
+                    }
+                });
 
                 self.syncConfigToHiddenField();
             });

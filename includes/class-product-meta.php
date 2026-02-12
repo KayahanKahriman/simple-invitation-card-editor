@@ -311,7 +311,8 @@ class SIE_Product_Meta
             if (!empty($raw)) {
                 $decoded = json_decode($raw, true);
                 if (json_last_error() === JSON_ERROR_NONE && isset($decoded['canvas']) && isset($decoded['layers'])) {
-                    update_post_meta($post_id, '_invitation_json_config', $raw);
+                    // wp_slash to compensate for update_post_meta's internal wp_unslash
+                    update_post_meta($post_id, '_invitation_json_config', wp_slash($raw));
                 }
             } else {
                 delete_post_meta($post_id, '_invitation_json_config');
