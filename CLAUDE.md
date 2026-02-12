@@ -176,7 +176,18 @@ Single IIFE-wrapped object, jQuery-based. Provides a visual design editor inside
 - Reverse center-point conversion when storing back to config (`left - width/2`)
 - Syncs property panel fields in real-time during drag (for the primary selected layer)
 
+### Undo/Redo
+- **Ctrl+Z:** Undo last change (works globally, no layer selection required)
+- **Ctrl+Y / Ctrl+Shift+Z:** Redo
+- Uses config snapshot history (`history[]` array of JSON strings, `historyIndex` pointer)
+- `pushHistory()` is called from `syncConfigToHiddenField()`, which is the single chokepoint for all mutations
+- Duplicate snapshots are skipped; history is capped at 50 entries (`maxHistory`)
+- `_isRestoring` flag prevents `syncConfigToHiddenField` from pushing to history during undo/redo restore
+- Initial state is pushed after `initializeConfig()` so it can always be reached via undo
+
 ### Keyboard Controls
+- **Ctrl+Z:** Undo (see Undo/Redo section)
+- **Ctrl+Y / Ctrl+Shift+Z:** Redo (see Undo/Redo section)
 - **Arrow keys:** Move all selected layers 1px (10px with Shift)
 - **Escape:** Deselect all layers
 - **Delete:** Delete selected layer (with confirmation)

@@ -8,6 +8,12 @@
         scaleFactor: 1,
         _resizeObserver: null,
 
+        // Undo/Redo
+        history: [],
+        historyIndex: -1,
+        maxHistory: 50,
+        _isRestoring: false,
+
         // DOM references
         $container: null,
         $canvasArea: null,
@@ -37,6 +43,7 @@
             this.bindKeyboardMovement();
             this.renderVisualEditor();
             this.setupCanvasScaling();
+            this.pushHistory(); // Save initial state
         },
 
         // ─── Config ──────────────────────────────────────────────
@@ -796,11 +803,25 @@
             var self = this;
 
             $(document).on('keydown.sie-admin', function (e) {
-                if (!self.selectedLayerId) return;
-
                 // Don't intercept when typing in inputs
                 var tag = e.target.tagName.toLowerCase();
                 if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+                // Undo/Redo (works even without layer selection)
+                if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+                    if (e.key === 'z' && !e.shiftKey) {
+                        e.preventDefault();
+                        self.undo();
+                        return;
+                    }
+                    if (e.key === 'y' || (e.key === 'z' && e.shiftKey) || (e.key === 'Z' && e.shiftKey)) {
+                        e.preventDefault();
+                        self.redo();
+                        return;
+                    }
+                }
+
+                if (!self.selectedLayerId) return;
 
                 var key = e.key;
                 if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', 'Delete'].indexOf(key) === -1) return;
@@ -867,6 +888,51 @@
 
         syncConfigToHiddenField: function () {
             this.$hiddenInput.val(JSON.stringify(this.config));
+            this.pushHistory();
+        },
+
+        // ─── Undo/Redo ─────────────────────────────────────────
+
+        pushHistory: function () {
+            if (this._isRestoring) return;
+
+            var snapshot = JSON.stringify(this.config);
+
+            // Skip if identical to current state
+            if (this.historyIndex >= 0 && this.history[this.historyIndex] === snapshot) return;
+
+            // Truncate any redo entries
+            this.history = this.history.slice(0, this.historyIndex + 1);
+            this.history.push(snapshot);
+
+            // Cap at maxHistory
+            if (this.history.length > this.maxHistory) {
+                this.history.shift();
+            }
+
+            this.historyIndex = this.history.length - 1;
+        },
+
+        undo: function () {
+            if (this.historyIndex <= 0) return;
+            this.historyIndex--;
+            this.restoreFromHistory();
+        },
+
+        redo: function () {
+            if (this.historyIndex >= this.history.length - 1) return;
+            this.historyIndex++;
+            this.restoreFromHistory();
+        },
+
+        restoreFromHistory: function () {
+            this._isRestoring = true;
+            this.config = JSON.parse(this.history[this.historyIndex]);
+            this.deselectLayer();
+            this.renderVisualEditor();
+            this.fitCanvas();
+            this.$hiddenInput.val(JSON.stringify(this.config));
+            this._isRestoring = false;
         },
 
         // ─── Utilities ───────────────────────────────────────────
