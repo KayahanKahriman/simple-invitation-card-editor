@@ -1,0 +1,429 @@
+/**
+ * Admin Visual Editor Styles
+ * Simple Invitation Editor
+ */
+
+/* Tab Navigation */
+.sie-admin-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #c3c4c7;
+    margin-bottom: 16px;
+}
+
+.sie-admin-tab-btn {
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    border-bottom: none;
+    background: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #50575e;
+    margin-bottom: -1px;
+    border-radius: 3px 3px 0 0;
+    transition: color 0.15s;
+}
+
+.sie-admin-tab-btn:hover {
+    color: #2271b1;
+}
+
+.sie-admin-tab-btn.active {
+    background: #fff;
+    border-color: #c3c4c7;
+    color: #1d2327;
+}
+
+.sie-admin-tab-content {
+    display: none;
+}
+
+.sie-admin-tab-content.active {
+    display: block;
+}
+
+/* JSON Tab */
+.sie-json-tab textarea {
+    width: 100%;
+    height: 400px;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 12px;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    resize: vertical;
+    tab-size: 2;
+}
+
+.sie-json-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.sie-json-status {
+    display: inline-block;
+    margin-left: 12px;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.sie-json-status.valid {
+    color: #00a32a;
+}
+
+.sie-json-status.invalid {
+    color: #d63638;
+}
+
+/* Visual Editor Layout */
+.sie-admin-editor {
+    display: flex;
+    gap: 0;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    background: #f0f0f1;
+    min-height: 600px;
+    overflow: hidden;
+}
+
+/* Left Panel - Canvas Settings & Layer List */
+.sie-admin-left-panel {
+    width: 280px;
+    min-width: 280px;
+    background: #fff;
+    border-right: 1px solid #c3c4c7;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.sie-admin-panel-section {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.sie-admin-panel-section:last-child {
+    border-bottom: none;
+}
+
+.sie-admin-panel-section h4 {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #50575e;
+    letter-spacing: 0.5px;
+}
+
+/* Canvas Settings Fields */
+.sie-admin-field {
+    margin-bottom: 10px;
+}
+
+.sie-admin-field:last-child {
+    margin-bottom: 0;
+}
+
+.sie-admin-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1d2327;
+    margin-bottom: 4px;
+}
+
+.sie-admin-field input[type="number"],
+.sie-admin-field input[type="text"],
+.sie-admin-field select,
+.sie-admin-field textarea {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid #8c8f94;
+    border-radius: 3px;
+    font-size: 13px;
+    line-height: 1.5;
+    box-sizing: border-box;
+}
+
+.sie-admin-field input:focus,
+.sie-admin-field select:focus,
+.sie-admin-field textarea:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: none;
+}
+
+.sie-admin-field textarea {
+    resize: vertical;
+    min-height: 50px;
+}
+
+/* Inline number fields */
+.sie-admin-field-row {
+    display: flex;
+    gap: 8px;
+}
+
+.sie-admin-field-row .sie-admin-field {
+    flex: 1;
+}
+
+/* Background Image Field */
+.sie-admin-bg-field {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+}
+
+.sie-admin-bg-field input[type="text"] {
+    flex: 1;
+    font-size: 11px;
+}
+
+.sie-admin-bg-field .button {
+    flex-shrink: 0;
+    padding: 0 8px !important;
+    min-height: 28px !important;
+    line-height: 26px !important;
+    font-size: 12px !important;
+}
+
+.sie-admin-bg-preview {
+    margin-top: 6px;
+    position: relative;
+}
+
+.sie-admin-bg-preview img {
+    max-width: 100%;
+    max-height: 80px;
+    border: 1px solid #c3c4c7;
+    border-radius: 3px;
+    display: block;
+}
+
+.sie-admin-bg-remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+.sie-admin-bg-remove:hover {
+    background: #d63638;
+}
+
+/* Layer List */
+.sie-admin-layer-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.sie-admin-layer-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    margin-bottom: 2px;
+    font-size: 13px;
+    color: #1d2327;
+    transition: background 0.1s;
+}
+
+.sie-admin-layer-item:hover {
+    background: #f0f0f1;
+}
+
+.sie-admin-layer-item.selected {
+    background: #e7f0f9;
+    border-color: #2271b1;
+    color: #2271b1;
+    font-weight: 600;
+}
+
+.sie-admin-layer-item .dashicons {
+    margin-right: 6px;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    color: #8c8f94;
+}
+
+.sie-admin-layer-item.selected .dashicons {
+    color: #2271b1;
+}
+
+.sie-admin-add-layer-btn {
+    width: 100%;
+    margin-top: 6px;
+    text-align: center;
+}
+
+/* Center Panel - Canvas Preview */
+.sie-admin-canvas-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 24px;
+    background-color: #eef2f7;
+    background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+    background-size: 20px 20px;
+    position: relative;
+}
+
+.sie-admin-canvas {
+    position: relative;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+    background-color: #fff;
+}
+
+.sie-admin-canvas-empty {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #8c8f94;
+    font-size: 14px;
+    text-align: center;
+    pointer-events: none;
+}
+
+/* Canvas Layers */
+.sie-admin-layer {
+    position: absolute;
+    cursor: move;
+    white-space: pre;
+    overflow: visible;
+    outline: none;
+    user-select: none;
+    transition: box-shadow 0.15s;
+    box-sizing: border-box;
+}
+
+.sie-admin-layer:hover {
+    box-shadow: 0 0 0 1px rgba(34, 113, 177, 0.5);
+}
+
+.sie-admin-layer.selected {
+    box-shadow: 0 0 0 2px #2271b1;
+    z-index: 100;
+}
+
+/* Right Panel - Layer Properties */
+.sie-admin-right-panel {
+    width: 300px;
+    min-width: 300px;
+    background: #fff;
+    border-left: 1px solid #c3c4c7;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.sie-admin-right-panel.hidden {
+    display: none;
+}
+
+.sie-admin-right-panel .sie-admin-panel-section h4 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Properties Panel Specific */
+.sie-admin-prop-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.sie-admin-prop-actions .button {
+    flex: 1;
+    text-align: center;
+    font-size: 12px !important;
+    padding: 0 8px !important;
+    min-height: 28px !important;
+    line-height: 26px !important;
+}
+
+.sie-admin-prop-actions .button-link-delete {
+    color: #d63638;
+}
+
+.sie-admin-prop-actions .button-link-delete:hover {
+    color: #a00;
+}
+
+/* Color Picker Integration */
+.sie-admin-field .wp-picker-container {
+    display: block;
+}
+
+.sie-admin-field .wp-picker-container .wp-color-result {
+    margin: 0;
+}
+
+/* No Selection State */
+.sie-admin-no-selection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #8c8f94;
+    font-size: 13px;
+    text-align: center;
+    padding: 24px;
+}
+
+/* Responsive: Stack panels vertically */
+@media screen and (max-width: 1400px) {
+    .sie-admin-editor {
+        flex-wrap: wrap;
+        min-height: auto;
+    }
+
+    .sie-admin-left-panel {
+        width: 100%;
+        min-width: 0;
+        border-right: none;
+        border-bottom: 1px solid #c3c4c7;
+        max-height: 300px;
+    }
+
+    .sie-admin-canvas-area {
+        width: 100%;
+        min-height: 400px;
+    }
+
+    .sie-admin-right-panel {
+        width: 100%;
+        min-width: 0;
+        border-left: none;
+        border-top: 1px solid #c3c4c7;
+    }
+
+    .sie-admin-right-panel.hidden {
+        display: none;
+    }
+}

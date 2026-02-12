@@ -113,14 +113,19 @@
             }
             style.transform = 'translateX(-50%)';
 
-            const $el = $('<div>', {
+            const elAttrs = {
                 class: 'sie-layer',
                 id: `sie-layer-${layer.id}`,
                 contenteditable: !this.is_admin_mode,
                 text: layer.default_text
-            }).css(style);
+            };
+            if (this.is_admin_mode) {
+                elAttrs.tabindex = '0';
+            }
+            const $el = $('<div>', elAttrs).css(style);
 
             if (this.is_admin_mode) {
+                $el.data('sie-layer-config', layer);
                 this.makeDraggable($el, layer);
             }
 
@@ -163,6 +168,61 @@
                 $('.sie-layer').css('box-shadow', 'none');
                 $(`#sie-layer-${layerId}`).css('box-shadow', '0 0 0 2px #d4af37');
             });
+
+            // Admin mode: layer selection and keyboard movement
+            if (this.is_admin_mode) {
+                // Select layer on click
+                this.preview.on('click', '.sie-layer', function (e) {
+                    e.stopPropagation();
+                    self.selectLayer($(this));
+                });
+
+                // Deselect on canvas background click
+                this.preview.on('click', function (e) {
+                    if ($(e.target).hasClass('sie-canvas') || $(e.target).hasClass('sie-preview-area')) {
+                        self.deselectLayer();
+                    }
+                });
+                this.previewArea.on('click', function (e) {
+                    if ($(e.target).is(self.previewArea)) {
+                        self.deselectLayer();
+                    }
+                });
+
+                // Arrow key movement on selected layer
+                $(document).on('keydown', function (e) {
+                    if (!self.selectedLayer) return;
+
+                    const key = e.key;
+                    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(key)) return;
+
+                    if (key === 'Escape') {
+                        self.deselectLayer();
+                        return;
+                    }
+
+                    e.preventDefault();
+                    const step = e.shiftKey ? 10 : 1;
+                    const $el = self.selectedLayer;
+                    const layer = $el.data('sie-layer-config');
+
+                    let left = parseFloat($el.css('left'));
+                    let top = parseFloat($el.css('top'));
+
+                    if (key === 'ArrowLeft') left -= step;
+                    if (key === 'ArrowRight') left += step;
+                    if (key === 'ArrowUp') top -= step;
+                    if (key === 'ArrowDown') top += step;
+
+                    const newLeft = (left / self.preview.width() * 100).toFixed(2) + '%';
+                    const newTop = (top / self.preview.height() * 100).toFixed(2) + '%';
+
+                    $el.css({ left: newLeft, top: newTop });
+                    layer.style.left = newLeft;
+                    layer.style.top = newTop;
+                    self.updateAdminExport();
+                });
+            }
 
             // Add to Cart Button (using event delegation since modal is moved to body)
             $(document).on('click', '#sie-add-to-cart-btn', function () {
@@ -212,12 +272,28 @@
         },
 
 
+        selectedLayer: null,
+
+        selectLayer: function ($el) {
+            this.deselectLayer();
+            $el.addClass('is-selected').focus();
+            this.selectedLayer = $el;
+        },
+
+        deselectLayer: function () {
+            if (this.selectedLayer) {
+                this.selectedLayer.removeClass('is-selected');
+                this.selectedLayer = null;
+            }
+        },
+
         makeDraggable: function ($el, layer) {
             const self = this;
             let isDragging = false;
             let startX, startY, startLeft, startTop;
 
             $el.on('mousedown', function (e) {
+                self.selectLayer($el);
                 isDragging = true;
                 startX = e.clientX;
                 startY = e.clientY;

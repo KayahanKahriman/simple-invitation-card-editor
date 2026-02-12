@@ -1,0 +1,821 @@
+(function ($) {
+    'use strict';
+
+    var SIE_AdminEditor = {
+        config: null,
+        selectedLayerId: null,
+        scaleFactor: 1,
+        _resizeObserver: null,
+
+        // DOM references
+        $container: null,
+        $canvasArea: null,
+        $canvas: null,
+        $leftPanel: null,
+        $rightPanel: null,
+        $hiddenInput: null,
+        $jsonTextarea: null,
+
+        init: function () {
+            this.$container = $('#sie-admin-visual-editor');
+            if (!this.$container.length) return;
+
+            this.$hiddenInput = $('#sie_invitation_json_config');
+            this.$jsonTextarea = $('#sie-json-textarea');
+            this.$canvasArea = this.$container.find('.sie-admin-canvas-area');
+            this.$canvas = this.$container.find('.sie-admin-canvas');
+            this.$leftPanel = this.$container.find('.sie-admin-left-panel');
+            this.$rightPanel = this.$container.find('.sie-admin-right-panel');
+
+            this.initializeConfig();
+            this.bindTabSwitching();
+            this.bindCanvasSettings();
+            this.bindLayerManagement();
+            this.bindPropertyPanel();
+            this.bindFormSubmission();
+            this.bindKeyboardMovement();
+            this.renderVisualEditor();
+            this.setupCanvasScaling();
+        },
+
+        // ─── Config ──────────────────────────────────────────────
+
+        initializeConfig: function () {
+            var raw = this.$hiddenInput.val();
+            if (raw) {
+                try {
+                    this.config = JSON.parse(raw);
+                    if (!this.config.canvas) this.config.canvas = this.getDefaultConfig().canvas;
+                    if (!this.config.layers) this.config.layers = [];
+                } catch (e) {
+                    this.config = this.getDefaultConfig();
+                }
+            } else {
+                this.config = this.getDefaultConfig();
+            }
+        },
+
+        getDefaultConfig: function () {
+            return {
+                canvas: { width: 1200, height: 1800, bg_image: '' },
+                layers: []
+            };
+        },
+
+        // ─── Tab Switching ───────────────────────────────────────
+
+        bindTabSwitching: function () {
+            var self = this;
+            $(document).on('click', '.sie-admin-tab-btn', function (e) {
+                e.preventDefault();
+                var target = $(this).data('tab');
+
+                $('.sie-admin-tab-btn').removeClass('active');
+                $(this).addClass('active');
+                $('.sie-admin-tab-content').removeClass('active');
+                $('#sie-tab-' + target).addClass('active');
+
+                if (target === 'json') {
+                    self.syncVisualToJson();
+                } else if (target === 'visual') {
+                    self.syncJsonToVisual();
+                }
+            });
+        },
+
+        syncVisualToJson: function () {
+            var json = JSON.stringify(this.config, null, 2);
+            this.$jsonTextarea.val(json);
+        },
+
+        syncJsonToVisual: function () {
+            var raw = this.$jsonTextarea.val();
+            if (!raw.trim()) return;
+
+            try {
+                var parsed = JSON.parse(raw);
+                if (!parsed.canvas || !Array.isArray(parsed.layers)) {
+                    this.showJsonStatus('Geçersiz yapı: canvas ve layers gerekli', false);
+                    return;
+                }
+                this.config = parsed;
+                this.deselectLayer();
+                this.renderVisualEditor();
+                this.fitCanvas();
+                this.syncConfigToHiddenField();
+                this.showJsonStatus('JSON başarıyla uygulandı', true);
+            } catch (e) {
+                this.showJsonStatus('JSON söz dizimi hatası: ' + e.message, false);
+            }
+        },
+
+        validateJson: function () {
+            var raw = this.$jsonTextarea.val();
+            try {
+                var parsed = JSON.parse(raw);
+                if (!parsed.canvas || !Array.isArray(parsed.layers)) {
+                    this.showJsonStatus('Geçersiz yapı: canvas ve layers gerekli', false);
+                    return;
+                }
+                this.showJsonStatus('JSON geçerli', true);
+            } catch (e) {
+                this.showJsonStatus('Hata: ' + e.message, false);
+            }
+        },
+
+        showJsonStatus: function (msg, isValid) {
+            var $status = $('.sie-json-status');
+            $status.text(msg)
+                .removeClass('valid invalid')
+                .addClass(isValid ? 'valid' : 'invalid');
+            clearTimeout(this._statusTimeout);
+            this._statusTimeout = setTimeout(function () {
+                $status.text('');
+            }, 5000);
+        },
+
+        // ─── Canvas Settings ─────────────────────────────────────
+
+        bindCanvasSettings: function () {
+            var self = this;
+
+            this.$leftPanel.on('change', '#sie-canvas-width', function () {
+                var val = parseInt($(this).val(), 10);
+                if (val > 0) {
+                    self.config.canvas.width = val;
+                    self.updateCanvas();
+                }
+            });
+
+            this.$leftPanel.on('change', '#sie-canvas-height', function () {
+                var val = parseInt($(this).val(), 10);
+                if (val > 0) {
+                    self.config.canvas.height = val;
+                    self.updateCanvas();
+                }
+            });
+
+            this.$leftPanel.on('click', '#sie-bg-select-btn', function (e) {
+                e.preventDefault();
+                self.openMediaPicker();
+            });
+
+            this.$leftPanel.on('click', '.sie-admin-bg-remove', function (e) {
+                e.preventDefault();
+                self.removeBackgroundImage();
+            });
+        },
+
+        openMediaPicker: function () {
+            var self = this;
+            var frame = wp.media({
+                title: 'Arka Plan Görseli Seç',
+                button: { text: 'Seç' },
+                multiple: false,
+                library: { type: 'image' }
+            });
+
+            frame.on('select', function () {
+                var attachment = frame.state().get('selection').first().toJSON();
+                self.setBackgroundImage(attachment.url);
+            });
+
+            frame.open();
+        },
+
+        setBackgroundImage: function (url) {
+            this.config.canvas.bg_image = url;
+            $('#sie-bg-url').val(url);
+            this.renderBgPreview();
+            this.updateCanvas();
+        },
+
+        removeBackgroundImage: function () {
+            this.config.canvas.bg_image = '';
+            $('#sie-bg-url').val('');
+            this.renderBgPreview();
+            this.updateCanvas();
+        },
+
+        renderBgPreview: function () {
+            var $preview = this.$leftPanel.find('.sie-admin-bg-preview');
+            if (this.config.canvas.bg_image) {
+                $preview.html(
+                    '<img src="' + this.config.canvas.bg_image + '" alt="">' +
+                    '<button type="button" class="sie-admin-bg-remove" title="Kaldır">&times;</button>'
+                );
+            } else {
+                $preview.html('');
+            }
+        },
+
+        updateCanvas: function () {
+            this.$canvas.css({
+                width: this.config.canvas.width + 'px',
+                height: this.config.canvas.height + 'px',
+                backgroundImage: this.config.canvas.bg_image
+                    ? 'url(' + this.config.canvas.bg_image + ')'
+                    : 'none'
+            });
+            this.fitCanvas();
+            this.syncConfigToHiddenField();
+        },
+
+        fitCanvas: function () {
+            var areaW = this.$canvasArea[0].clientWidth;
+            var areaH = this.$canvasArea[0].clientHeight;
+            if (areaW === 0 || areaH === 0) return;
+
+            var pad = 24;
+            var availW = areaW - pad * 2;
+            var availH = areaH - pad * 2;
+            var baseW = this.config.canvas.width;
+            var baseH = this.config.canvas.height;
+            var scale = Math.min(availW / baseW, availH / baseH, 1);
+
+            this.$canvas.css({
+                width: baseW + 'px',
+                height: baseH + 'px',
+                transform: 'scale(' + scale + ')',
+                transformOrigin: 'top left',
+                marginRight: Math.floor(baseW * (scale - 1)) + 'px',
+                marginBottom: Math.floor(baseH * (scale - 1)) + 'px'
+            });
+            this.scaleFactor = scale;
+        },
+
+        setupCanvasScaling: function () {
+            var self = this;
+            if (typeof ResizeObserver !== 'undefined') {
+                this._resizeObserver = new ResizeObserver(function () {
+                    self.fitCanvas();
+                });
+                this._resizeObserver.observe(this.$canvasArea[0]);
+            }
+        },
+
+        // ─── Layer Management ────────────────────────────────────
+
+        bindLayerManagement: function () {
+            var self = this;
+
+            this.$leftPanel.on('click', '.sie-admin-add-layer-btn', function (e) {
+                e.preventDefault();
+                self.addNewLayer();
+            });
+
+            this.$leftPanel.on('click', '.sie-admin-layer-item', function () {
+                var id = $(this).data('layer-id');
+                self.selectLayerById(id);
+            });
+
+            this.$canvas.on('mousedown', '.sie-admin-layer', function (e) {
+                var id = $(this).data('layer-id');
+                self.selectLayerById(id);
+            });
+
+            // Deselect on canvas background click
+            this.$canvasArea.on('click', function (e) {
+                if ($(e.target).hasClass('sie-admin-canvas-area') || $(e.target).hasClass('sie-admin-canvas')) {
+                    self.deselectLayer();
+                }
+            });
+        },
+
+        addNewLayer: function () {
+            var id = 'layer_' + Date.now();
+            var layer = {
+                id: id,
+                type: 'text',
+                label: 'Yeni Katman',
+                default_text: 'Metin',
+                style: {
+                    left: '10%',
+                    top: '10%',
+                    width: '80%',
+                    fontFamily: 'Darleston',
+                    fontSize: '48px',
+                    color: '#333333',
+                    textAlign: 'center'
+                }
+            };
+            this.config.layers.push(layer);
+            this.renderVisualEditor();
+            this.selectLayerById(id);
+            this.syncConfigToHiddenField();
+        },
+
+        renderVisualEditor: function () {
+            this.renderCanvasSettings();
+            this.renderLayerList();
+            this.renderLayers();
+            this.updateCanvas();
+        },
+
+        renderCanvasSettings: function () {
+            $('#sie-canvas-width').val(this.config.canvas.width);
+            $('#sie-canvas-height').val(this.config.canvas.height);
+            $('#sie-bg-url').val(this.config.canvas.bg_image || '');
+            this.renderBgPreview();
+        },
+
+        renderLayerList: function () {
+            var self = this;
+            var $list = this.$leftPanel.find('.sie-admin-layer-list');
+            $list.empty();
+
+            this.config.layers.forEach(function (layer) {
+                var selected = self.selectedLayerId === layer.id ? ' selected' : '';
+                $list.append(
+                    '<li class="sie-admin-layer-item' + selected + '" data-layer-id="' + layer.id + '">' +
+                    '<span class="dashicons dashicons-text"></span>' +
+                    '<span>' + self.escapeHtml(layer.label) + '</span>' +
+                    '</li>'
+                );
+            });
+        },
+
+        renderLayers: function () {
+            var self = this;
+            this.$canvas.find('.sie-admin-layer').remove();
+
+            this.config.layers.forEach(function (layer) {
+                self.renderLayer(layer);
+            });
+        },
+
+        renderLayer: function (layer) {
+            var style = $.extend({}, layer.style);
+
+            // Convert left+width to center-point positioning (same as frontend)
+            if (style.left && style.width) {
+                var left = parseFloat(style.left);
+                var width = parseFloat(style.width);
+                style.left = (left + width / 2) + '%';
+                delete style.width;
+            }
+            style.transform = 'translateX(-50%)';
+            style.position = 'absolute';
+
+            var text = (layer.default_text || '').replace(/\\n/g, '\n');
+
+            var $el = $('<div>')
+                .addClass('sie-admin-layer')
+                .attr('data-layer-id', layer.id)
+                .css(style)
+                .text(text);
+
+            if (this.selectedLayerId === layer.id) {
+                $el.addClass('selected');
+            }
+
+            this.$canvas.append($el);
+            this.makeLayerDraggable($el, layer);
+        },
+
+        // ─── Selection ───────────────────────────────────────────
+
+        selectLayerById: function (id) {
+            this.selectedLayerId = id;
+
+            // Update layer list selection
+            this.$leftPanel.find('.sie-admin-layer-item').removeClass('selected');
+            this.$leftPanel.find('.sie-admin-layer-item[data-layer-id="' + id + '"]').addClass('selected');
+
+            // Update canvas layer selection
+            this.$canvas.find('.sie-admin-layer').removeClass('selected');
+            this.$canvas.find('.sie-admin-layer[data-layer-id="' + id + '"]').addClass('selected');
+
+            // Show properties panel
+            var layer = this.getLayerById(id);
+            if (layer) {
+                this.showPropertiesPanel(layer);
+            }
+        },
+
+        deselectLayer: function () {
+            this.selectedLayerId = null;
+            this.$leftPanel.find('.sie-admin-layer-item').removeClass('selected');
+            this.$canvas.find('.sie-admin-layer').removeClass('selected');
+            this.$rightPanel.addClass('hidden');
+        },
+
+        getLayerById: function (id) {
+            for (var i = 0; i < this.config.layers.length; i++) {
+                if (this.config.layers[i].id === id) return this.config.layers[i];
+            }
+            return null;
+        },
+
+        getLayerIndex: function (id) {
+            for (var i = 0; i < this.config.layers.length; i++) {
+                if (this.config.layers[i].id === id) return i;
+            }
+            return -1;
+        },
+
+        // ─── Properties Panel ────────────────────────────────────
+
+        bindPropertyPanel: function () {
+            var self = this;
+
+            // Populate font dropdown
+            this.populateFontDropdown();
+
+            // Text fields
+            this.$rightPanel.on('input', '#sie-prop-label', function () {
+                self.updateSelectedLayerProperty('label', $(this).val());
+            });
+
+            this.$rightPanel.on('input', '#sie-prop-default-text', function () {
+                self.updateSelectedLayerProperty('default_text', $(this).val());
+            });
+
+            this.$rightPanel.on('input', '#sie-prop-id', function () {
+                var newId = $(this).val().replace(/[^a-zA-Z0-9_-]/g, '');
+                $(this).val(newId);
+                if (newId && self.selectedLayerId) {
+                    var layer = self.getLayerById(self.selectedLayerId);
+                    if (layer) {
+                        var oldId = layer.id;
+                        layer.id = newId;
+                        self.selectedLayerId = newId;
+                        // Update DOM
+                        self.$canvas.find('.sie-admin-layer[data-layer-id="' + oldId + '"]').attr('data-layer-id', newId);
+                        self.$leftPanel.find('.sie-admin-layer-item[data-layer-id="' + oldId + '"]').attr('data-layer-id', newId);
+                        self.syncConfigToHiddenField();
+                    }
+                }
+            });
+
+            // Style fields
+            this.$rightPanel.on('change', '#sie-prop-font', function () {
+                self.updateSelectedLayerStyle('fontFamily', $(this).val());
+            });
+
+            this.$rightPanel.on('input', '#sie-prop-fontsize', function () {
+                self.updateSelectedLayerStyle('fontSize', $(this).val() + 'px');
+            });
+
+            this.$rightPanel.on('change', '#sie-prop-textalign', function () {
+                self.updateSelectedLayerStyle('textAlign', $(this).val());
+            });
+
+            this.$rightPanel.on('input', '#sie-prop-left', function () {
+                self.updateSelectedLayerStylePosition('left', $(this).val());
+            });
+
+            this.$rightPanel.on('input', '#sie-prop-top', function () {
+                self.updateSelectedLayerStylePosition('top', $(this).val());
+            });
+
+            this.$rightPanel.on('input', '#sie-prop-width', function () {
+                self.updateSelectedLayerStylePosition('width', $(this).val());
+            });
+
+            this.$rightPanel.on('input', '#sie-prop-letterspacing', function () {
+                var val = $(this).val();
+                self.updateSelectedLayerStyle('letterSpacing', val ? val + 'px' : '');
+            });
+
+            this.$rightPanel.on('input', '#sie-prop-lineheight', function () {
+                var val = $(this).val();
+                self.updateSelectedLayerStyle('lineHeight', val || '');
+            });
+
+            this.$rightPanel.on('change', '#sie-prop-fontweight', function () {
+                self.updateSelectedLayerStyle('fontWeight', $(this).val());
+            });
+
+            this.$rightPanel.on('change', '#sie-prop-fontstyle', function () {
+                self.updateSelectedLayerStyle('fontStyle', $(this).val());
+            });
+
+            // Duplicate & Delete
+            this.$rightPanel.on('click', '#sie-prop-duplicate', function (e) {
+                e.preventDefault();
+                self.duplicateSelectedLayer();
+            });
+
+            this.$rightPanel.on('click', '#sie-prop-delete', function (e) {
+                e.preventDefault();
+                if (confirm('Bu katmanı silmek istediğinize emin misiniz?')) {
+                    self.deleteSelectedLayer();
+                }
+            });
+        },
+
+        populateFontDropdown: function () {
+            var $select = this.$rightPanel.find('#sie-prop-font');
+            if (!$select.length) return;
+
+            $select.empty();
+
+            // Web-safe fonts
+            var webFonts = ['Arial', 'Georgia', 'Times New Roman', 'Verdana', 'Courier New'];
+            var $webGroup = $('<optgroup label="Sistem Fontları">');
+            webFonts.forEach(function (f) {
+                $webGroup.append('<option value="' + f + '">' + f + '</option>');
+            });
+            $select.append($webGroup);
+
+            // Custom fonts from localized data
+            if (typeof sie_admin_config !== 'undefined' && sie_admin_config.fonts) {
+                var $customGroup = $('<optgroup label="Özel Fontlar">');
+                sie_admin_config.fonts.forEach(function (f) {
+                    $customGroup.append('<option value="' + f + '">' + f + '</option>');
+                });
+                $select.append($customGroup);
+            }
+        },
+
+        showPropertiesPanel: function (layer) {
+            this.$rightPanel.removeClass('hidden');
+
+            // Fill fields
+            $('#sie-prop-id').val(layer.id);
+            $('#sie-prop-label').val(layer.label || '');
+            $('#sie-prop-default-text').val(layer.default_text || '');
+
+            var s = layer.style || {};
+            $('#sie-prop-font').val(s.fontFamily || 'Darleston');
+            $('#sie-prop-fontsize').val(parseInt(s.fontSize, 10) || 48);
+            $('#sie-prop-textalign').val(s.textAlign || 'center');
+            $('#sie-prop-left').val(parseFloat(s.left) || 0);
+            $('#sie-prop-top').val(parseFloat(s.top) || 0);
+            $('#sie-prop-width').val(parseFloat(s.width) || 80);
+            $('#sie-prop-letterspacing').val(parseFloat(s.letterSpacing) || '');
+            $('#sie-prop-lineheight').val(s.lineHeight || '');
+            $('#sie-prop-fontweight').val(s.fontWeight || 'normal');
+            $('#sie-prop-fontstyle').val(s.fontStyle || 'normal');
+
+            // Init/update color picker
+            this.initColorPicker(s.color || '#333333');
+        },
+
+        initColorPicker: function (color) {
+            var self = this;
+            var $input = $('#sie-prop-color');
+
+            // Destroy previous if exists
+            if ($input.data('wpWpColorPicker')) {
+                $input.wpColorPicker('close');
+                // Re-create fresh input
+                var $parent = $input.closest('.sie-admin-field');
+                $parent.find('.wp-picker-container').remove();
+                $parent.append('<input type="text" id="sie-prop-color" value="">');
+                $input = $('#sie-prop-color');
+            }
+
+            $input.val(color);
+            $input.wpColorPicker({
+                defaultColor: color,
+                change: function (event, ui) {
+                    self.updateSelectedLayerStyle('color', ui.color.toString());
+                },
+                clear: function () {
+                    self.updateSelectedLayerStyle('color', '#333333');
+                }
+            });
+        },
+
+        updateSelectedLayerProperty: function (prop, value) {
+            if (!this.selectedLayerId) return;
+            var layer = this.getLayerById(this.selectedLayerId);
+            if (!layer) return;
+
+            layer[prop] = value;
+
+            if (prop === 'default_text') {
+                var text = value.replace(/\\n/g, '\n');
+                this.$canvas.find('.sie-admin-layer[data-layer-id="' + this.selectedLayerId + '"]').text(text);
+            }
+
+            if (prop === 'label') {
+                this.renderLayerList();
+            }
+
+            this.syncConfigToHiddenField();
+        },
+
+        updateSelectedLayerStyle: function (prop, value) {
+            if (!this.selectedLayerId) return;
+            var layer = this.getLayerById(this.selectedLayerId);
+            if (!layer) return;
+
+            if (!layer.style) layer.style = {};
+
+            if (value === '' || value === undefined) {
+                delete layer.style[prop];
+            } else {
+                layer.style[prop] = value;
+            }
+
+            // Apply to canvas layer (need to handle center-point conversion for positioning)
+            var $el = this.$canvas.find('.sie-admin-layer[data-layer-id="' + this.selectedLayerId + '"]');
+            if (['left', 'top', 'width'].indexOf(prop) === -1) {
+                $el.css(prop, value || '');
+            } else {
+                // Re-render this single layer to apply position conversion
+                this.renderLayers();
+                this.selectLayerById(this.selectedLayerId);
+            }
+
+            this.syncConfigToHiddenField();
+        },
+
+        updateSelectedLayerStylePosition: function (prop, value) {
+            if (!this.selectedLayerId) return;
+            var layer = this.getLayerById(this.selectedLayerId);
+            if (!layer || !layer.style) return;
+
+            layer.style[prop] = value + '%';
+            this.renderLayers();
+            this.selectLayerById(this.selectedLayerId);
+            this.syncConfigToHiddenField();
+        },
+
+        duplicateSelectedLayer: function () {
+            if (!this.selectedLayerId) return;
+            var layer = this.getLayerById(this.selectedLayerId);
+            if (!layer) return;
+
+            var clone = JSON.parse(JSON.stringify(layer));
+            clone.id = layer.id + '_copy_' + Date.now();
+            clone.label = layer.label + ' (kopya)';
+
+            // Offset position slightly
+            if (clone.style && clone.style.top) {
+                clone.style.top = (parseFloat(clone.style.top) + 3) + '%';
+            }
+
+            var idx = this.getLayerIndex(this.selectedLayerId);
+            this.config.layers.splice(idx + 1, 0, clone);
+
+            this.renderVisualEditor();
+            this.selectLayerById(clone.id);
+            this.syncConfigToHiddenField();
+        },
+
+        deleteSelectedLayer: function () {
+            if (!this.selectedLayerId) return;
+            var idx = this.getLayerIndex(this.selectedLayerId);
+            if (idx === -1) return;
+
+            this.config.layers.splice(idx, 1);
+            this.deselectLayer();
+            this.renderVisualEditor();
+            this.syncConfigToHiddenField();
+        },
+
+        // ─── Drag ────────────────────────────────────────────────
+
+        makeLayerDraggable: function ($el, layer) {
+            var self = this;
+            var isDragging = false;
+            var startX, startY, startLeft, startTop;
+
+            $el.on('mousedown', function (e) {
+                if (e.which !== 1) return; // left click only
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startLeft = parseFloat($el.css('left'));
+                startTop = parseFloat($el.css('top'));
+
+                e.preventDefault();
+
+                $(document).on('mousemove.sie-admin-drag', function (e) {
+                    if (!isDragging) return;
+
+                    var dx = (e.clientX - startX) / self.scaleFactor;
+                    var dy = (e.clientY - startY) / self.scaleFactor;
+
+                    var canvasW = self.config.canvas.width;
+                    var canvasH = self.config.canvas.height;
+
+                    var newLeftPx = startLeft + dx;
+                    var newTopPx = startTop + dy;
+
+                    var newLeftPct = (newLeftPx / canvasW * 100).toFixed(2);
+                    var newTopPct = (newTopPx / canvasH * 100).toFixed(2);
+
+                    $el.css({ left: newLeftPct + '%', top: newTopPct + '%' });
+
+                    // Reverse the center-point conversion to store original left+width
+                    var origWidth = parseFloat(layer.style.width) || 80;
+                    layer.style.left = (parseFloat(newLeftPct) - origWidth / 2).toFixed(2) + '%';
+                    layer.style.top = newTopPct + '%';
+
+                    // Sync property fields if this layer is selected
+                    if (self.selectedLayerId === layer.id) {
+                        $('#sie-prop-left').val(parseFloat(layer.style.left).toFixed(2));
+                        $('#sie-prop-top').val(parseFloat(layer.style.top).toFixed(2));
+                    }
+                });
+
+                $(document).on('mouseup.sie-admin-drag', function () {
+                    if (isDragging) {
+                        isDragging = false;
+                        self.syncConfigToHiddenField();
+                    }
+                    $(document).off('.sie-admin-drag');
+                });
+            });
+        },
+
+        // ─── Keyboard ────────────────────────────────────────────
+
+        bindKeyboardMovement: function () {
+            var self = this;
+
+            $(document).on('keydown.sie-admin', function (e) {
+                if (!self.selectedLayerId) return;
+
+                // Don't intercept when typing in inputs
+                var tag = e.target.tagName.toLowerCase();
+                if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+                var key = e.key;
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', 'Delete'].indexOf(key) === -1) return;
+
+                if (key === 'Escape') {
+                    self.deselectLayer();
+                    return;
+                }
+
+                if (key === 'Delete') {
+                    if (confirm('Bu katmanı silmek istediğinize emin misiniz?')) {
+                        self.deleteSelectedLayer();
+                    }
+                    return;
+                }
+
+                e.preventDefault();
+                var step = e.shiftKey ? 10 : 1;
+                var $el = self.$canvas.find('.sie-admin-layer[data-layer-id="' + self.selectedLayerId + '"]');
+                var layer = self.getLayerById(self.selectedLayerId);
+                if (!$el.length || !layer) return;
+
+                var left = parseFloat($el.css('left'));
+                var top = parseFloat($el.css('top'));
+                var canvasW = self.config.canvas.width;
+                var canvasH = self.config.canvas.height;
+
+                if (key === 'ArrowLeft') left -= step;
+                if (key === 'ArrowRight') left += step;
+                if (key === 'ArrowUp') top -= step;
+                if (key === 'ArrowDown') top += step;
+
+                var newLeftPct = (left / canvasW * 100).toFixed(2);
+                var newTopPct = (top / canvasH * 100).toFixed(2);
+
+                $el.css({ left: newLeftPct + '%', top: newTopPct + '%' });
+
+                // Reverse center-point conversion
+                var origWidth = parseFloat(layer.style.width) || 80;
+                layer.style.left = (parseFloat(newLeftPct) - origWidth / 2).toFixed(2) + '%';
+                layer.style.top = newTopPct + '%';
+
+                if (self.selectedLayerId === layer.id) {
+                    $('#sie-prop-left').val(parseFloat(layer.style.left).toFixed(2));
+                    $('#sie-prop-top').val(parseFloat(layer.style.top).toFixed(2));
+                }
+
+                self.syncConfigToHiddenField();
+            });
+        },
+
+        // ─── Save ────────────────────────────────────────────────
+
+        bindFormSubmission: function () {
+            var self = this;
+            $('#post').on('submit', function () {
+                self.syncConfigToHiddenField();
+            });
+        },
+
+        syncConfigToHiddenField: function () {
+            this.$hiddenInput.val(JSON.stringify(this.config));
+        },
+
+        // ─── Utilities ───────────────────────────────────────────
+
+        escapeHtml: function (str) {
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
+        }
+    };
+
+    $(document).ready(function () {
+        SIE_AdminEditor.init();
+
+        // Validate JSON button
+        $(document).on('click', '#sie-validate-json', function (e) {
+            e.preventDefault();
+            SIE_AdminEditor.validateJson();
+        });
+    });
+
+})(jQuery);
