@@ -288,10 +288,11 @@
                 }
             });
 
-            // Deselect on canvas background click
-            this.$canvasArea.on('click', function (e) {
-                if ($(e.target).closest('.sie-admin-layer').length) return;
-                self.deselectLayer();
+            // Deselect on canvas background mousedown (not click, to avoid conflicts with layer mousedown)
+            this.$canvasArea.on('mousedown', function (e) {
+                if ($(e.target).hasClass('sie-admin-canvas-area') || $(e.target).hasClass('sie-admin-canvas')) {
+                    self.deselectLayer();
+                }
             });
         },
 

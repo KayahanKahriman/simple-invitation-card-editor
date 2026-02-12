@@ -166,6 +166,7 @@ Single IIFE-wrapped object, jQuery-based. Provides a visual design editor inside
 - **Delete:** Splices from config, deselects, re-renders (with confirmation prompt)
 - **Selection:** Click layer in list or on canvas; highlights both; shows properties panel
 - **Multi-select:** Shift+click on layers (canvas or layer list) toggles them in/out of the selection. Regular click resets to single selection. `selectedLayerIds` array tracks all selected layers; `selectedLayerId` tracks the primary (last-clicked) layer for the properties panel.
+- **Deselect:** Uses `mousedown` (not `click`) on the canvas background to avoid conflicts with layer mousedown/click event ordering.
 
 ### Drag & Drop
 - Mousedown on canvas layer starts drag tracking
