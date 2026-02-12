@@ -351,6 +351,45 @@
     justify-content: space-between;
 }
 
+/* Alignment Buttons */
+.sie-admin-align-buttons {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+}
+
+.sie-align-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #8c8f94;
+    border-radius: 3px;
+    background: #f6f7f7;
+    cursor: pointer;
+    color: #50575e;
+    transition: background 0.1s, color 0.1s;
+}
+
+.sie-align-btn:hover {
+    background: #2271b1;
+    border-color: #2271b1;
+    color: #fff;
+}
+
+.sie-align-btn .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+}
+
+.sie-align-btn .sie-rotate-90 {
+    transform: rotate(90deg);
+}
+
 /* Properties Panel Specific */
 .sie-admin-prop-actions {
     display: flex;

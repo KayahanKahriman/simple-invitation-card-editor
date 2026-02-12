@@ -180,6 +180,21 @@ class SIE_Product_Meta
 
                         <!-- Right Panel: Layer Properties -->
                         <div class="sie-admin-right-panel hidden">
+                            <div class="sie-admin-align-section" style="display:none">
+                                <div class="sie-admin-panel-section">
+                                    <h4>Hizalama</h4>
+                                    <div class="sie-admin-align-buttons">
+                                        <button type="button" class="sie-align-btn" data-align="align-left" title="Sola Hizala"><span class="dashicons dashicons-align-left"></span></button>
+                                        <button type="button" class="sie-align-btn" data-align="align-center-h" title="Yatay Ortala"><span class="dashicons dashicons-align-center"></span></button>
+                                        <button type="button" class="sie-align-btn" data-align="align-right" title="Sağa Hizala"><span class="dashicons dashicons-align-right"></span></button>
+                                        <button type="button" class="sie-align-btn" data-align="align-top" title="Üste Hizala"><span class="dashicons dashicons-align-left sie-rotate-90"></span></button>
+                                        <button type="button" class="sie-align-btn" data-align="align-center-v" title="Dikey Ortala"><span class="dashicons dashicons-align-center sie-rotate-90"></span></button>
+                                        <button type="button" class="sie-align-btn" data-align="align-bottom" title="Aşağı Hizala"><span class="dashicons dashicons-align-right sie-rotate-90"></span></button>
+                                        <button type="button" class="sie-align-btn" data-align="distribute-h" title="Yatay Dağıt"><span class="dashicons dashicons-ellipsis"></span></button>
+                                        <button type="button" class="sie-align-btn" data-align="distribute-v" title="Dikey Dağıt"><span class="dashicons dashicons-ellipsis sie-rotate-90"></span></button>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="sie-admin-panel-section">
                                 <h4>Katman Özellikleri</h4>
 

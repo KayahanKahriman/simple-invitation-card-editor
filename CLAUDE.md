@@ -197,6 +197,14 @@ Single IIFE-wrapped object, jQuery-based. Provides a visual design editor inside
 - Layer text is rendered using `.html()` with escaped content and `<br>` tags for newlines (not `.text()`, which would strip line breaks)
 - `escapeHtml()` sanitizes text first, then `\n` characters are converted to `<br>`
 
+### Alignment & Distribution
+- Appears at the top of the right panel when 2+ layers are selected (`.sie-admin-align-section`, hidden by default)
+- **8 buttons** in a compact grid: Align Left, Center H, Right, Top, Center V, Bottom, Distribute H, Distribute V
+- All operations work on stored config percentage values (`left`, `top`, `width`); layers have no stored height so vertical ops use `top` only
+- Distribute requires 3+ layers; evenly spaces center-points (horizontal) or `top` values (vertical) between extremes
+- Each alignment action calls `renderLayers()` + `refreshSelectionUI()` + `syncConfigToHiddenField()`, so undo/redo works automatically
+- Methods: `bindAlignmentButtons()`, `getSelectedLayersBounds()`, `alignLayers(type)`
+
 ### Properties Panel
 - **Text fields:** ID (alphanumeric + underscore/dash only), label, default_text
 - **Style fields:** fontFamily (dropdown with 5 system + 34 custom fonts), fontSize, textAlign, color (WordPress `wpColorPicker`), fontWeight, fontStyle, letterSpacing, lineHeight

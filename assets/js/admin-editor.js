@@ -41,6 +41,7 @@
             this.bindPropertyPanel();
             this.bindFormSubmission();
             this.bindKeyboardMovement();
+            this.bindAlignmentButtons();
             this.renderVisualEditor();
             this.setupCanvasScaling();
             this.pushHistory(); // Save initial state
@@ -442,6 +443,14 @@
                 self.$leftPanel.find('.sie-admin-layer-item[data-layer-id="' + id + '"]').addClass('selected');
                 self.$canvas.find('.sie-admin-layer[data-layer-id="' + id + '"]').addClass('selected');
             });
+
+            // Show/hide alignment section based on multi-selection
+            var $alignSection = this.$rightPanel.find('.sie-admin-align-section');
+            if (this.selectedLayerIds.length >= 2) {
+                $alignSection.show();
+            } else {
+                $alignSection.hide();
+            }
         },
 
         deselectLayer: function () {
@@ -450,6 +459,7 @@
             this.$leftPanel.find('.sie-admin-layer-item').removeClass('selected');
             this.$canvas.find('.sie-admin-layer').removeClass('selected');
             this.$rightPanel.addClass('hidden');
+            this.$rightPanel.find('.sie-admin-align-section').hide();
         },
 
         getLayerById: function (id) {
@@ -875,6 +885,143 @@
 
                 self.syncConfigToHiddenField();
             });
+        },
+
+        // ─── Alignment & Distribution ─────────────────────────────
+
+        bindAlignmentButtons: function () {
+            var self = this;
+            this.$rightPanel.on('click', '.sie-align-btn', function (e) {
+                e.preventDefault();
+                var type = $(this).data('align');
+                if (type) self.alignLayers(type);
+            });
+        },
+
+        getSelectedLayersBounds: function () {
+            var self = this;
+            var bounds = [];
+            this.selectedLayerIds.forEach(function (id) {
+                var layer = self.getLayerById(id);
+                if (!layer || !layer.style) return;
+                var left = parseFloat(layer.style.left) || 0;
+                var top = parseFloat(layer.style.top) || 0;
+                var width = parseFloat(layer.style.width) || 80;
+                bounds.push({
+                    layer: layer,
+                    left: left,
+                    top: top,
+                    width: width,
+                    right: left + width,
+                    centerX: left + width / 2
+                });
+            });
+            return bounds;
+        },
+
+        alignLayers: function (type) {
+            var bounds = this.getSelectedLayersBounds();
+            if (bounds.length < 2) return;
+
+            var i;
+            switch (type) {
+                case 'align-left':
+                    var minLeft = Infinity;
+                    for (i = 0; i < bounds.length; i++) {
+                        if (bounds[i].left < minLeft) minLeft = bounds[i].left;
+                    }
+                    for (i = 0; i < bounds.length; i++) {
+                        bounds[i].layer.style.left = minLeft + '%';
+                    }
+                    break;
+
+                case 'align-center-h':
+                    var minL = Infinity, maxR = -Infinity;
+                    for (i = 0; i < bounds.length; i++) {
+                        if (bounds[i].left < minL) minL = bounds[i].left;
+                        if (bounds[i].right > maxR) maxR = bounds[i].right;
+                    }
+                    var midX = (minL + maxR) / 2;
+                    for (i = 0; i < bounds.length; i++) {
+                        bounds[i].layer.style.left = (midX - bounds[i].width / 2) + '%';
+                    }
+                    break;
+
+                case 'align-right':
+                    var maxRight = -Infinity;
+                    for (i = 0; i < bounds.length; i++) {
+                        if (bounds[i].right > maxRight) maxRight = bounds[i].right;
+                    }
+                    for (i = 0; i < bounds.length; i++) {
+                        bounds[i].layer.style.left = (maxRight - bounds[i].width) + '%';
+                    }
+                    break;
+
+                case 'align-top':
+                    var minTop = Infinity;
+                    for (i = 0; i < bounds.length; i++) {
+                        if (bounds[i].top < minTop) minTop = bounds[i].top;
+                    }
+                    for (i = 0; i < bounds.length; i++) {
+                        bounds[i].layer.style.top = minTop + '%';
+                    }
+                    break;
+
+                case 'align-center-v':
+                    var minT = Infinity, maxT = -Infinity;
+                    for (i = 0; i < bounds.length; i++) {
+                        if (bounds[i].top < minT) minT = bounds[i].top;
+                        if (bounds[i].top > maxT) maxT = bounds[i].top;
+                    }
+                    var midY = (minT + maxT) / 2;
+                    for (i = 0; i < bounds.length; i++) {
+                        bounds[i].layer.style.top = midY + '%';
+                    }
+                    break;
+
+                case 'align-bottom':
+                    var maxBot = -Infinity;
+                    for (i = 0; i < bounds.length; i++) {
+                        if (bounds[i].top > maxBot) maxBot = bounds[i].top;
+                    }
+                    for (i = 0; i < bounds.length; i++) {
+                        bounds[i].layer.style.top = maxBot + '%';
+                    }
+                    break;
+
+                case 'distribute-h':
+                    if (bounds.length < 3) return;
+                    bounds.sort(function (a, b) { return a.centerX - b.centerX; });
+                    var firstCX = bounds[0].centerX;
+                    var lastCX = bounds[bounds.length - 1].centerX;
+                    var stepH = (lastCX - firstCX) / (bounds.length - 1);
+                    for (i = 1; i < bounds.length - 1; i++) {
+                        var newCX = firstCX + stepH * i;
+                        bounds[i].layer.style.left = (newCX - bounds[i].width / 2) + '%';
+                    }
+                    break;
+
+                case 'distribute-v':
+                    if (bounds.length < 3) return;
+                    bounds.sort(function (a, b) { return a.top - b.top; });
+                    var firstTop = bounds[0].top;
+                    var lastTop = bounds[bounds.length - 1].top;
+                    var stepV = (lastTop - firstTop) / (bounds.length - 1);
+                    for (i = 1; i < bounds.length - 1; i++) {
+                        bounds[i].layer.style.top = (firstTop + stepV * i) + '%';
+                    }
+                    break;
+            }
+
+            this.renderLayers();
+            this.refreshSelectionUI();
+            this.syncConfigToHiddenField();
+
+            // Re-show properties for current primary layer
+            if (this.selectedLayerId) {
+                var layer = this.getLayerById(this.selectedLayerId);
+                if (layer) this.showPropertiesPanel(layer);
+            }
         },
 
         // ─── Save ────────────────────────────────────────────────
