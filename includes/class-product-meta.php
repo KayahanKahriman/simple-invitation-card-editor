@@ -22,22 +22,21 @@ class SIE_Product_Meta
 
     private function __construct()
     {
-        // Add to WooCommerce Product Data Tabs
-        add_filter('woocommerce_product_data_tabs', array($this, 'add_product_data_tab'));
-        add_action('woocommerce_product_data_panels', array($this, 'render_product_data_panel'));
+        add_action('add_meta_boxes', array($this, 'add_meta_box'));
         add_action('woocommerce_process_product_meta', array($this, 'save_product_data_tab'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
     }
 
-    public function add_product_data_tab($tabs)
+    public function add_meta_box()
     {
-        $tabs['sie_invitation'] = array(
-            'label' => __('Invitation Editor', 'simple-invitation-editor'),
-            'target' => 'sie_invitation_data',
-            'class' => array('show_if_simple', 'show_if_variable'),
-            'priority' => 100,
+        add_meta_box(
+            'sie_invitation_editor',
+            __('Invitation Editor', 'simple-invitation-editor'),
+            array($this, 'render_meta_box'),
+            'product',
+            'normal',
+            'high'
         );
-        return $tabs;
     }
 
     public function enqueue_admin_assets($hook)
@@ -123,13 +122,10 @@ class SIE_Product_Meta
         );
     }
 
-    public function render_product_data_panel()
+    public function render_meta_box($post)
     {
-        global $post;
         $config = get_post_meta($post->ID, '_invitation_json_config', true);
         ?>
-        <div id="sie_invitation_data" class="panel woocommerce_options_panel hidden">
-            <div style="padding: 12px;">
 
                 <!-- Hidden input for form submission -->
                 <input type="hidden" id="sie_invitation_json_config" name="sie_invitation_json_config"
@@ -268,17 +264,17 @@ class SIE_Product_Meta
                                 <div class="sie-admin-field-row">
                                     <div class="sie-admin-field">
                                         <label for="sie-prop-left">Sol (%)</label>
-                                        <input type="number" id="sie-prop-left" step="0.5" min="-50" max="100">
+                                        <input type="number" id="sie-prop-left" step="any" min="-50" max="100">
                                     </div>
                                     <div class="sie-admin-field">
                                         <label for="sie-prop-top">Üst (%)</label>
-                                        <input type="number" id="sie-prop-top" step="0.5" min="-50" max="100">
+                                        <input type="number" id="sie-prop-top" step="any" min="-50" max="100">
                                     </div>
                                 </div>
 
                                 <div class="sie-admin-field">
                                     <label for="sie-prop-width">Genişlik (%)</label>
-                                    <input type="number" id="sie-prop-width" step="0.5" min="5" max="100">
+                                    <input type="number" id="sie-prop-width" step="any" min="5" max="100">
                                 </div>
                             </div>
 
@@ -303,9 +299,6 @@ class SIE_Product_Meta
                         <span class="sie-json-status"></span>
                     </div>
                 </div>
-
-            </div>
-        </div>
         <?php
     }
 
