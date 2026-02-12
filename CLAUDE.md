@@ -37,7 +37,7 @@ Checkout --> Saved as `_sie_design_data` order item meta + individual layer labe
 simple-invitation-editor/
 ├── simple-invitation-editor.php      # Main plugin file, bootstrap class
 ├── includes/
-│   ├── class-product-meta.php        # WooCommerce admin: visual editor + JSON config tab in product editor
+│   ├── class-product-meta.php        # WordPress metabox: visual editor + JSON config for product editor
 │   ├── class-cart-handler.php        # Cart/order integration + editor modal HTML + trigger button
 │   └── class-product-page-handler.php # Hides default add-to-cart & quantity for invitation products
 ├── assets/
@@ -65,14 +65,14 @@ simple-invitation-editor/
   - `is_admin_mode` - Boolean, true when user has `manage_options` cap AND `?mode=admin` query param is present
 
 ### `SIE_Product_Meta` (class-product-meta.php)
-- **Role:** Adds "Invitation Editor" tab to WooCommerce product data panel in wp-admin with a full visual editor.
+- **Role:** Registers a standalone WordPress metabox ("Invitation Editor") on the product edit screen with a full visual editor.
+- **Metabox:** Registered via `add_meta_boxes` hook, rendered by `render_meta_box()`. Context: `normal`, priority: `high`.
 - **Meta key:** `_invitation_json_config` (stored via hidden input, synced from visual editor or JSON textarea)
-- **Visibility:** Shows for simple and variable products (`show_if_simple`, `show_if_variable`)
 - **Admin asset enqueue:** Hooks `admin_enqueue_scripts`, guarded to `post.php`/`post-new.php` on `product` post type. Loads `wp.media`, `wp-color-picker`, fonts CSS, `admin-editor.css`, `admin-editor.js`.
 - **Localized data (`sie_admin_config`):** `fonts` (array of 34 font family names), `plugin_url`
 - **`get_available_fonts()`** - Returns all custom font family names matching `fonts.css` declarations.
-- **Save validation:** `save_product_data_tab()` validates JSON structure (must have `canvas` and `layers` keys) before saving. Empty values delete the meta.
-- **Panel HTML:** Two tabs (Visual Editor / JSON). Visual tab contains a three-panel layout: left (canvas settings + layer list), center (live canvas preview), right (layer properties). JSON tab contains a raw textarea with validate button.
+- **Save validation:** `save_product_data_tab()` validates JSON structure (must have `canvas` and `layers` keys) before saving. Uses `wp_slash()` before `update_post_meta()` to prevent double-unslashing of backslash sequences (e.g., `\n` in JSON). Empty values delete the meta.
+- **Metabox HTML:** Two tabs (Visual Editor / JSON). Visual tab contains a three-panel layout: left (canvas settings + layer list), center (live canvas preview), right (layer properties). JSON tab contains a raw textarea with validate button.
 
 ### `SIE_Cart_Handler` (class-cart-handler.php)
 - **Role:** The largest class. Handles:
@@ -134,7 +134,7 @@ Single IIFE-wrapped object, jQuery-based. Key behaviors:
 
 ## JavaScript: SIE_AdminEditor (admin-editor.js)
 
-Single IIFE-wrapped object, jQuery-based. Provides a visual design editor inside the WooCommerce product data panel.
+Single IIFE-wrapped object, jQuery-based. Provides a visual design editor inside a standalone WordPress metabox on the product edit screen.
 
 ### Three-Panel Layout
 ```
@@ -165,25 +165,32 @@ Single IIFE-wrapped object, jQuery-based. Provides a visual design editor inside
 - **Duplicate:** Deep clones selected layer, generates new ID, offsets top by 3%
 - **Delete:** Splices from config, deselects, re-renders (with confirmation prompt)
 - **Selection:** Click layer in list or on canvas; highlights both; shows properties panel
+- **Multi-select:** Shift+click on layers (canvas or layer list) toggles them in/out of the selection. Regular click resets to single selection. `selectedLayerIds` array tracks all selected layers; `selectedLayerId` tracks the primary (last-clicked) layer for the properties panel.
 
 ### Drag & Drop
 - Mousedown on canvas layer starts drag tracking
+- **Multi-layer drag:** When dragging a layer that is part of a multi-selection, all selected layers move together by the same delta
 - Mouse deltas compensated by `scaleFactor`: `dx / scaleFactor`
 - Converts pixel position to percentage of canvas dimensions
 - Reverse center-point conversion when storing back to config (`left - width/2`)
-- Syncs property panel fields in real-time during drag
+- Syncs property panel fields in real-time during drag (for the primary selected layer)
 
 ### Keyboard Controls
-- **Arrow keys:** Move selected layer 1px (10px with Shift)
-- **Escape:** Deselect current layer
+- **Arrow keys:** Move all selected layers 1px (10px with Shift)
+- **Escape:** Deselect all layers
 - **Delete:** Delete selected layer (with confirmation)
 - All keyboard handlers skip when focus is on input/textarea/select elements
+
+### Text Rendering
+- Layer text is rendered using `.html()` with escaped content and `<br>` tags for newlines (not `.text()`, which would strip line breaks)
+- `escapeHtml()` sanitizes text first, then `\n` characters are converted to `<br>`
 
 ### Properties Panel
 - **Text fields:** ID (alphanumeric + underscore/dash only), label, default_text
 - **Style fields:** fontFamily (dropdown with 5 system + 34 custom fonts), fontSize, textAlign, color (WordPress `wpColorPicker`), fontWeight, fontStyle, letterSpacing, lineHeight
-- **Position fields:** left %, top %, width %
+- **Position fields:** left %, top %, width % (all use `step="any"` to accept any decimal value)
 - Changes apply immediately to canvas DOM and config object
+- Properties panel always shows the primary (last-clicked) selected layer
 
 ### Form Submission
 - Hooks `#post` form submit event
@@ -244,9 +251,8 @@ Aire Light Pro, Amostely Signature, Andellia Davilton, Angers Script, Anthem Of 
 
 | Hook | Class | Purpose |
 |------|-------|---------|
-| `woocommerce_product_data_tabs` | Product_Meta | Add "Invitation Editor" tab |
-| `woocommerce_product_data_panels` | Product_Meta | Render visual editor + JSON tab in panel |
-| `woocommerce_process_product_meta` | Product_Meta | Save JSON config (with validation) |
+| `add_meta_boxes` | Product_Meta | Register "Invitation Editor" metabox on product screen |
+| `woocommerce_process_product_meta` | Product_Meta | Save JSON config (with validation + wp_slash) |
 | `admin_enqueue_scripts` | Product_Meta | Load admin editor CSS/JS, wp.media, color picker, fonts |
 | `woocommerce_single_variation` | Cart_Handler | Render trigger button + modal |
 | `woocommerce_add_cart_item_data` | Cart_Handler | Capture design data into cart |
@@ -259,13 +265,14 @@ Aire Light Pro, Amostely Signature, Andellia Davilton, Angers Script, Anthem Of 
 
 The primary way to design invitation layouts:
 1. Go to **Products → Edit Product** in wp-admin
-2. Click the **"Invitation Editor"** tab in the product data panel
+2. Scroll to the **"Invitation Editor"** metabox below the product data panel
 3. The **Visual Editor** tab is active by default — set canvas dimensions, pick a background image
 4. Click **"+ Katman Ekle"** to add text layers
 5. Drag layers on the canvas to position them, or use arrow keys for fine control (Shift for 10px steps)
-6. Select a layer to edit its properties in the right panel (font, size, color, alignment, position)
-7. Switch to the **JSON** tab to view/edit raw JSON, or validate it
-8. Click **Update** to save the product — the config is stored as `_invitation_json_config` post meta
+6. **Shift+click** multiple layers to select them, then drag or arrow-key to move them together
+7. Select a layer to edit its properties in the right panel (font, size, color, alignment, position)
+8. Switch to the **JSON** tab to view/edit raw JSON, or validate it
+9. Click **Update** to save the product — the config is stored as `_invitation_json_config` post meta
 
 ### Frontend Admin Mode (legacy)
 
@@ -275,7 +282,7 @@ Still available for quick position tweaks on the live product page:
 3. Open the editor modal
 4. Drag layers to desired positions
 5. Click "Copy Updated JSON" in the sidebar
-6. Paste the updated JSON into the product's "Invitation Editor" tab in wp-admin
+6. Paste the updated JSON into the product's "Invitation Editor" metabox in wp-admin
 
 ## Key Implementation Details
 
@@ -293,3 +300,4 @@ Still available for quick position tweaks on the live product page:
 - No database tables - all data stored in post meta and order item meta
 - No settings page - configuration is per-product via JSON
 - Turkish UI strings are hardcoded (not using `__()` for JS strings)
+- **wp_slash gotcha:** `update_post_meta()` internally calls `wp_unslash()`, so if you've already unslashed `$_POST` data, you must wrap with `wp_slash()` before saving — otherwise backslash sequences like `\n` in JSON get stripped. This applies to any meta value containing JSON with escape sequences.
